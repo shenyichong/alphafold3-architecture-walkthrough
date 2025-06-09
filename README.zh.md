@@ -1,7 +1,8 @@
 # 超详细 AlphaFold 3 算法解析
 
-by shenyichong
+by Yichong Shen
 
+特别感谢，其中的图示化工作，均来自以下博客：
 [https://elanapearl.github.io/blog/2024/the-illustrated-alphafold/](https://elanapearl.github.io/blog/2024/the-illustrated-alphafold/) 
 
 # Input Preparation
