@@ -1,4 +1,4 @@
-# Detailed AlphaFold 3 Algorithm Analysis
+# AlphaFold 3, Demystified: A Comprehensive Technical Breakdown of Its Architecture and Design
 
 by Yichong Shen
 
