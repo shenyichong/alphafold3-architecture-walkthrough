@@ -2,6 +2,10 @@
 
 by Yichong Shen
 
+> **📧 Contact**: For questions, discussions, or collaborations related to this analysis, feel free to reach out at: shenyichong2011@gmail.com
+>
+> **⭐ If you find this analysis helpful, please consider giving this repository a star! Your support helps others discover this resource.**
+
 > This technical deep dive is inspired by [The Illustrated AlphaFold](https://elanapearl.github.io/blog/2024/the-illustrated-alphafold/). Special thanks to Elana Pearl for the visual resources.
 
 # Input Preparation
@@ -756,3 +760,26 @@ $\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}
        2. LinearNoBias_token_atom_idx(l)( … ), the function of this function is that for different atoms l, the matrix used for linear transformation is different. Get the corresponding weight matrix through token_atom_idx(l), with matrix shape [c_token, b_plddt], then right multiply with s_i(l) with shape [c_token] to get final vector [b_plddt].
        3. Finally perform softmax to get pLDDT confidence probability, with b_plddt=50, which is a 50-dimensional vector indicating the probability that lddt value falls within these 50 bin ranges.
     8. Calculate resolved confidence probability (Note: resolved confidence probability here is also the value for each atom, same as above): The result after calculation and softmax is a 2-dimensional vector, predicting the confidence of whether the current atom can be experimentally resolved.
+
+---
+
+# 📬 Contact & Collaboration
+
+**Author**: Yichong Shen
+**Email**: shenyichong2011@gmail.com
+**GitHub**: [@shenyichong](https://github.com/shenyichong)
+
+For questions, discussions, or potential collaborations related to this AlphaFold 3 analysis, please don't hesitate to reach out via email or create an issue in this repository.
+
+# 🌟 Support This Work
+
+If this comprehensive analysis helped you understand AlphaFold 3 better, please:
+
+- ⭐ **Star this repository** to help others discover it
+- 🔄 **Share** it with your colleagues and network
+- 💭 **Open issues** for questions or suggestions
+- 🤝 **Contribute** improvements or corrections via pull requests
+
+Your support makes a difference in keeping high-quality technical content freely available!
+
+---

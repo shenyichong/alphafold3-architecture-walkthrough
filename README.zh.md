@@ -2,8 +2,12 @@
 
 by Yichong Shen
 
-特别感谢，其中的图示化工作，部分来自以下博客：
-[https://elanapearl.github.io/blog/2024/the-illustrated-alphafold/](https://elanapearl.github.io/blog/2024/the-illustrated-alphafold/) 
+> **📧 联系方式**: 如果您对本分析有任何问题、讨论或合作意向，欢迎通过以下邮箱联系：shenyichong2011@gmail.com
+> 
+> **⭐ 如果您觉得这个分析对您有帮助，请考虑为本仓库点个star！您的支持能帮助更多人发现这个资源。**
+
+> 本技术深度解析的灵感来源于 [The Illustrated AlphaFold](https://elanapearl.github.io/blog/2024/the-illustrated-alphafold/)。特别感谢 Elana Pearl 提供的可视化资源。
+
 
 # Input Preparation
 
@@ -761,3 +765,23 @@ $\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}
             2. 这里的LinearNoBias_token_atom_idx(l)( … ) ，这个函数的作用是，针对不同的原子l，其对应的用于线性变换的矩阵是不同的，通过token_atom_idx(l)来获取对应的weight矩阵，矩阵形状为[c_token, b_plddt] ，然后将其右乘s_i(l)，形状是[c_token]得到最终的向量为[b_plddt]。
             3. 最后再进行softmax来得到pLDDT的置信度概率，其b_plddt=50，是一个50维度的向量，标识lddt的值落到这个50个bin范围内的概率。
         8. 计算resolved的置信度概率（注意，这里的resolved的置信度概率也是针对每一个原子的值，同上）：计算的结果经过softmax之后是一个2维的向量，预测当前原子是否能够被实验解析出来的置信度。
+
+---
+
+# 📬 联系与合作
+
+**作者**: Yichong Shen  
+**邮箱**: shenyichong2011@gmail.com  
+**GitHub**: [@shenyichong](https://github.com/shenyichong)
+
+如果您对这份AlphaFold 3分析有任何问题、讨论或潜在合作意向，请随时通过邮箱联系或在本仓库中创建issue。
+
+# 🌟 支持这项工作
+
+如果这份全面的分析帮助您更好地理解了AlphaFold 3，请考虑：
+- ⭐ **为本仓库点星** 帮助其他人发现它
+- 🔄 **分享** 给您的同事和网络
+- 💭 **创建issues** 提出问题或建议  
+- 🤝 **贡献** 通过pull request提供改进或修正
+
+---
