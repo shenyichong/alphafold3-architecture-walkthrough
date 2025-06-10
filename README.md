@@ -6,7 +6,7 @@ by Yichong Shen
 
 # Input Preparation
 
-## **How are MSA and Templates obtained?**
+## How are MSA and Templates obtained?
 
 - Why do we need MSA?
 
@@ -33,7 +33,7 @@ by Yichong Shen
   - If certain tokens contain multiple atoms, select the central atom for distance calculation, for example, Cα is the central atom of amino acids, and C1 is the central atom of nucleotides.
   - Templates only contain distance information on the same chain, ignoring interactions between chains.
 
-## **How to construct Atom-level representations?**
+## How to construct Atom-level representations?
 
 - Constructing p and q: [Corresponding to Algorithm 5 AtomAttentionEncoder]
   - To construct atom-level single representation, we first need all atomic-level features. The first step is to construct a reference conformer for each amino acid, nucleotide, and ligand. The reference conformer can be looked up or calculated through specific methods, serving as local prior three-dimensional structural information.
@@ -138,7 +138,7 @@ by Yichong Shen
 
          ![image.png](images/image%2023.png)
 
-## **How to construct Token-level representations?**
+## How to construct Token-level representations?
 
 - Constructing Token-level Single Sequence Representation
   - The input is q, atom-level single representation, with shape [C_atom, N_atoms]. The outputs are S_inputs and S_init, with shapes [C_token+65, N_tokens] and [C_token, N_tokens] respectively.
