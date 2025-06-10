@@ -2,7 +2,8 @@
 
 by Yichong Shen
 
-Special thanks: The illustrative work in this document is from the following blog:[https://elanapearl.github.io/blog/2024/the-illustrated-alphafold/](https://elanapearl.github.io/blog/2024/the-illustrated-alphafold/)
+Special thanks: The illustrative work in this document is from the following blog:
+[https://elanapearl.github.io/blog/2024/the-illustrated-alphafold/](https://elanapearl.github.io/blog/2024/the-illustrated-alphafold/)
 
 # Input Preparation
 
