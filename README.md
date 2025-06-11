@@ -40,9 +40,9 @@ by Yichong Shen
     - [Detailed Sample Diffusion (Inference Process)](#detailed-sample-diffusion-inference-process)
     - [Detailed Diffusion Module (Inference Process)](#detailed-diffusion-module-inference-process)
 - [Loss Function](#loss-function)
-  - [$L_{distogram}$](#ldistogram)
-  - [$L_{diffusion}$](#ldiffusion)
-  - [$L_{confidence}$](#lconfidence)
+  - [$L_{distogram}$](#l_distogram)
+  - [$L_{diffusion}$](#l_diffusion)
+  - [$L_{confidence}$](#l_confidence)
 
 </details>
 
@@ -595,11 +595,11 @@ Note 2: The 3 blocks in AtomAttentionEncoder and 3 blocks in AtomAttentionDecode
 
 The final LossFunction formula is as follows:
 
-$\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot L_{\text{confidence}} + \alpha_{\text{diffusion}} \cdot \mathcal{L}_{\text{diffusion}} + \alpha_{\text{distogram}} \cdot \mathcal{L}_{\text{distogram}}$
+$\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot L\_{\text{confidence}} + \alpha\_{\text{diffusion}} \cdot \mathcal{L}\_{\text{diffusion}} + \alpha\_{\text{distogram}} \cdot \mathcal{L}\_{\text{distogram}}$
 
-Where, $L_{confidence}= \mathcal{L}_{\text{plddt}} + \mathcal{L}_{\text{pde}} + \mathcal{L}_{\text{resolved}} + \alpha_{\text{pae}} \cdot \mathcal{L}_{\text{pae}}$
+Where, $L\_{confidence}= \mathcal{L}\_{\text{plddt}} + \mathcal{L}\_{\text{pde}} + \mathcal{L}\_{\text{resolved}} + \alpha\_{\text{pae}} \cdot \mathcal{L}\_{\text{pae}}$
 
-$\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}_{\text{plddt}} + \mathcal{L}_{\text{pde}} + \mathcal{L}_{\text{resolved}} + \alpha_{\text{pae}} \cdot \mathcal{L}_{\text{pae}} \right) + \alpha_{\text{diffusion}} \cdot \mathcal{L}_{\text{diffusion}} + \alpha_{\text{distogram}} \cdot \mathcal{L}_{\text{distogram}}$
+$\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{L}\_{\text{plddt}} + \mathcal{L}\_{\text{pde}} + \mathcal{L}\_{\text{resolved}} + \alpha\_{\text{pae}} \cdot \mathcal{L}\_{\text{pae}} \right) + \alpha\_{\text{diffusion}} \cdot \mathcal{L}\_{\text{diffusion}} + \alpha\_{\text{distogram}} \cdot \mathcal{L}\_{\text{distogram}}$
 
 - L_distogram: Used to evaluate whether the predicted token-level distogram (i.e., distances between tokens) is accurate.
 - L_diffusion: Used to evaluate whether the predicted atom-level distogram (i.e., relationships between atoms) is accurate, and also includes some additional terms, including prioritizing relationships between nearby atoms and processing atoms in protein-ligand bonds.
@@ -611,14 +611,14 @@ $\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}
 - Why evaluate whether the distance prediction between tokens (or atoms) is accurate, rather than directly evaluating whether the coordinate prediction of tokens (or atoms) is accurate? → The most fundamental reason is that the coordinates of tokens (or atoms) in space may change with the rotation or translation of the entire structure, but the relative distances between them will not change. Such a loss can reflect the rotational and translational invariance of the structure.
 - What is the specific formula?
 
-  $\mathcal{L}_{\text{dist}} = -\frac{1}{N_{\text{res}}^2} \sum_{i,j} \sum_{b=1}^{64} y_{ij}^b \log p_{ij}^b$
+  $\mathcal{L}\_{\text{dist}} = -\frac{1}{N\_{\text{res}}^2} \sum_{i,j} \sum_{b=1}^{64} y\_{ij}^b \log p\_{ij}^b$
 
   - Here y_b_i_j refers to uniformly dividing the distance between the i-th token and j-th token into 64 buckets (from 2Å to 22Å). y_b_i_j refers to one of these 64 buckets. Here y_b_i_j uses one-hot encoding to represent that the actual result falls into a specific bucket.
   - p_b_i_j refers to the probability that the distance value between the i-th token and j-th token falls into a certain bucket, which is a result after softmax.
   - For any token pair (i,j), find the difference between its predicted distance and actual distance using cross-entropy:
     - Calculate $\sum_{b=1}^{64} y_{ij}^b \log p_{ij}^b=\log p_{ij}^{\text{target\_bin}}$
   - For all token pairs, calculate the average loss:
-    - Calculate $-\frac{1}{N_{\text{res}}^2} \sum_{i,j} \log p_{ij}^{\text{target\_bin}}$ to get the final L_distogram loss value.
+    - Calculate $-\frac{1}{N\_{\text{res}}^2} \sum_{i,j} \log p\_{ij}^{\text{target\_bin}}$ to get the final L_distogram loss value.
 
 ## $L_{diffusion}$
 
@@ -660,7 +660,7 @@ $\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}
           ![Smooth LDDT Component vs Distance Difference.png](images/Smooth_LDDT_Component_vs_Distance_Difference.png)
       - Then, to make this calculation score mainly examine distances between nearby atoms, atom pairs with very far actual distances are not included in the loss calculation (c_l_m=0). That is, nucleotide atom pairs with actual distances greater than 30Å and non-nucleotide atom pairs with actual distances greater than 15Å are not included.
       - Finally, calculate the mean of $\epsilon_{lm}$ scores for atom pairs where c_l_m is not 0 as the lddt value. The closer this value is to 1, the more accurate the average atom pair prediction. Convert it to loss as 1-lddt.
-  - Finally, $\mathcal{L}_{\text{diffusion}} = \frac{\hat{t}^2 + \sigma_{\text{data}}^2}{(\hat{t} + \sigma_{\text{data}})^2} \cdot \left( \mathcal{L}_{\text{MSE}} + \alpha_{\text{bond}} \cdot \mathcal{L}_{\text{bond}} \right) + \mathcal{L}_{\text{smooth\_lddt}}$
+  - Finally, $\mathcal{L}\_{\text{diffusion}} = \frac{\hat{t}^2 + \sigma\_{\text{data}}^2}{(\hat{t} + \sigma\_{\text{data}})^2} \cdot \left( \mathcal{L}\_{\text{MSE}} + \alpha\_{\text{bond}} \cdot \mathcal{L}\_{\text{bond}} \right) + \mathcal{L}\_{\text{smooth\_lddt}}$
     - Here $\sigma_{data}$ is a constant determined by data variance, set to 16 here.
     - Here t^ is the sampled noise level during training, specifically calculated as $\hat{t}=\sigma_{\text{data}} \cdot \exp\left( -1.2 + 1.5 \cdot \mathcal{N}(0, 1) \right)$
     - Here $\alpha_{bond}$ is 0 during initial training and 1 during fine-tuning.
@@ -668,7 +668,7 @@ $\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}
 ## $L_{confidence}$
 
 - The role of this last loss is not to improve the accuracy of the model's structure prediction, but to help the model learn how to evaluate the accuracy of its own predictions. This loss is also a weighted sum of four different losses used to evaluate self-accuracy.
-- The specific formula is: $L_{confidence}= \mathcal{L}_{\text{plddt}} + \mathcal{L}_{\text{pde}} + \mathcal{L}_{\text{resolved}} + \alpha_{\text{pae}} \cdot \mathcal{L}_{\text{pae}}$
+- The specific formula is: $L\_{confidence}= \mathcal{L}\_{\text{plddt}} + \mathcal{L}\_{\text{pde}} + \mathcal{L}\_{\text{resolved}} + \alpha\_{\text{pae}} \cdot \mathcal{L}\_{\text{pae}}$
 - Mini-Rollout explanation:
 
   ![image.png](images/image%2074.png)
@@ -687,9 +687,9 @@ $\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}
 
         ![image.png](images/image%2075.png)
 
-        - Where $d_{lm}$ is the distance between atoms l and m predicted by mini-rollout.
+        - Where $d\_{lm}$ is the distance between atoms l and m predicted by mini-rollout.
         - ${m}\in{R}$, the selection of atom m is based on the real three-dimensional structure of this training sequence: 1) m's distance is within a certain nearby range of l (30Å or 15Å, depending on m's atom type); 2) m only selects atoms located on polymers (small molecules and ligands are not considered); 3) only one atom per token is considered. For atoms in standard amino acids or nucleotides, m uses their representative atoms ($C_\alpha$ or $C_1$) for representation.
-        - Then for each pair (l,m), perform LDDT (Local Distance Difference Test): $\frac{1}{4} \sum_{c \in \{0.5, 1, 2, 4\}} d_{lm} < c$. If l and m are relatively close in real distance, they should also be close enough in prediction results. Four thresholds are set here - if all are satisfied, LDDT is 1; if none are satisfied, it's 0.
+        - Then for each pair (l,m), perform LDDT (Local Distance Difference Test): $\frac{1}{4} \sum_{c \in \{0.5, 1, 2, 4\}} d\_{lm} < c$. If l and m are relatively close in real distance, they should also be close enough in prediction results. Four thresholds are set here - if all are satisfied, LDDT is 1; if none are satisfied, it's 0.
         - Finally, sum all LDDT values calculated for m near l to get an $lddt_l$ value for atom l, whose magnitude can measure the difference between the model's predicted structure and real structure at atom l. Note this is an unnormalized value.
     - Calculate confidence head output probability distribution of this atom's LDDT: $p_l^{\text{plddt}}$ (during training and prediction):
 
@@ -738,7 +738,7 @@ $\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}
             - First, translate x so that b becomes the origin.
             - Then, perform projection, calculating d's projection on each basis vector, i.e., (d*e1, d*e2, d*e3).
             - Finally, get the new coordinates of x in coordinate system $\Phi$: x_transformed.
-      - $\text{computeAlignmentError}(\{\vec{x}_i\}, \{\vec{x}_i^\text{true}\}, \{\Phi_i\}, \{\Phi_i^\text{true}\}, \epsilon = 1e^{-8} \, \text{\AA}^2)$: Calculate alignment error between token i and token j.
+      - $\text{computeAlignmentError}(\{\vec{x}\_i\}, \{\vec{x}\_i^\text{true}\}, \{\Phi_i\}, \{\Phi_i^\text{true}\}, \epsilon = 1e^{-8} \, \text{\AA}^2)$: Calculate alignment error between token i and token j.
 
         ![image.png](images/image%2078.png)
 
@@ -767,9 +767,9 @@ $\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}
     - Besides alignment error, the model also needs to predict prediction errors of absolute distances between important atoms.
     - The calculation method for distance error here is relatively simple, as follows:
 
-      - First, calculate the absolute distance between representative atoms of token i and token j predicted by the model: $d_{ij}^{\text{pred}}$
-      - Then, calculate the real absolute distance between representative atoms of token i and token j: $d_{ij}^{\text{gt}}$
-      - Finally, directly calculate the absolute difference between the two: $e_{ij} = \left| d_{ij}^{\text{pred}} - d_{ij}^{\text{gt}} \right|$
+      - First, calculate the absolute distance between representative atoms of token i and token j predicted by the model: $d\_{ij}^{\text{pred}}$
+      - Then, calculate the real absolute distance between representative atoms of token i and token j: $d\_{ij}^{\text{gt}}$
+      - Finally, directly calculate the absolute difference between the two: $e\_{ij} = \left| d\_{ij}^{\text{pred}} - d\_{ij}^{\text{gt}} \right|$
     - Similarly, the result of $\mathbf{p}_{ij}^{\text{pae}}$ predicted through confidence head is also a 64-dimensional vector, representing the probability that e_i_j falls into 64 bins (from 0Å to 32Å, with 0.5Å steps).
     - Similarly, then align the two through cross-entropy loss to get L_pde:
 

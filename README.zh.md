@@ -612,11 +612,11 @@ by Yichong Shen
 
 最终的LossFunction的公式如下：
 
-$\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot L_{\text{confidence}} + \alpha_{\text{diffusion}} \cdot \mathcal{L}_{\text{diffusion}} + \alpha_{\text{distogram}} \cdot \mathcal{L}_{\text{distogram}}$
+$\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot L\_{\text{confidence}} + \alpha\_{\text{diffusion}} \cdot \mathcal{L}\_{\text{diffusion}} + \alpha\_{\text{distogram}} \cdot \mathcal{L}\_{\text{distogram}}$
 
-其中， $L_{confidence}= \mathcal{L}_{\text{plddt}} + \mathcal{L}_{\text{pde}} + \mathcal{L}_{\text{resolved}} + \alpha_{\text{pae}} \cdot \mathcal{L}_{\text{pae}}$
+其中， $L\_{confidence}= \mathcal{L}\_{\text{plddt}} + \mathcal{L}\_{\text{pde}} + \mathcal{L}\_{\text{resolved}} + \alpha\_{\text{pae}} \cdot \mathcal{L}\_{\text{pae}}$
 
-$\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}_{\text{plddt}} + \mathcal{L}_{\text{pde}} + \mathcal{L}_{\text{resolved}} + \alpha_{\text{pae}} \cdot \mathcal{L}_{\text{pae}} \right) + \alpha_{\text{diffusion}} \cdot \mathcal{L}_{\text{diffusion}} + \alpha_{\text{distogram}} \cdot \mathcal{L}_{\text{distogram}}$
+$\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{L}\_{\text{plddt}} + \mathcal{L}\_{\text{pde}} + \mathcal{L}\_{\text{resolved}} + \alpha\_{\text{pae}} \cdot \mathcal{L}\_{\text{pae}} \right) + \alpha\_{\text{diffusion}} \cdot \mathcal{L}\_{\text{diffusion}} + \alpha\_{\text{distogram}} \cdot \mathcal{L}\_{\text{distogram}}$
 
 - L_distogram: 用于评估预测出来的 token-level 的 distogram（也就是token-token之间的距离）是否准确。
 - L_diffusion: 用于评估预测出来atom-level 的 distogram （也就是atom-atome之间的关系）是否准确，同时还包含了一些额外的terms，包括优先考虑就近原子之间的关系以及对蛋白质-配体之间的键的原子进行处理。
@@ -628,7 +628,7 @@ $\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}
 - 为什么是要评估token（或者原子）之间的距离预测的是否准确，而不是直接评估token（或原子）的坐标预测的是否准确？→ 最本质的原因在于token（或者原子）的坐标在空间中睡着整个结构的旋转或者平移是可能改变的，但是他们之间的相对距离是不会改变的，这样的loss才能够体现结构的旋转和平移不变性。
 - 具体的公式是怎么样的？
     
-    $\mathcal{L}_{\text{dist}} = -\frac{1}{N_{\text{res}}^2} \sum_{i,j} \sum_{b=1}^{64} y_{ij}^b \log p_{ij}^b$
+    $\mathcal{L}\_{\text{dist}} = -\frac{1}{N\_{\text{res}}^2} \sum_{i,j} \sum_{b=1}^{64} y\_{ij}^b \log p\_{ij}^b$
     
     - 这里y_b_i_j指的是将第i个token和第j个token之间的距离均匀划分到64个桶中去（从2埃到22埃），y_b_i_j指的就是在这64个桶中的某一个桶，这里y_b_i_j使用one-hot编码表示实际的结果落到某一个特定的桶中。
     - p_b_i_j指的是对第i个token和第j个token之间的距离的值落到某一个桶中的概率，是一个softmax之后的结果。
@@ -657,7 +657,7 @@ $\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}
         - 注意这里是一个weighted Mean Squared Error： $w_l = 1 + f_l^{\text{is\_dna}} \alpha^{\text{dna}} + f_l^{\text{is\_rna}} \alpha^{\text{rna}} + f_l^{\text{is\_ligand}} \alpha^{\text{ligand}}$ ，其中 $\alpha^{\text{dna}} = \alpha^{\text{rna}} = 5,  \alpha^{\text{ligand}} = 10$ 。这里对RNA/DNA和ligand的权重设置的较大，意味着如果这些原子的预测准确性有更高的要求。
     - $L_{bond}$ ：用于确保配体（ligand)和主链之间的键长是合理的损失函数。
         - 为什么需要这个loss呢？原因在于扩散模型可以恢复出一个总体结构正确，但是细节不够精确的模型，比如某一个化学键变得过长或者过短。同时配体就像挂在蛋白质链边上的小饰品，你不希望这个饰品过长或者过短，而蛋白质氨基酸之间的肽键基本长度是稳定的，主链内部原子排列的本身就有比较强的约束。
-        - 所以这里的计算方法为： $\mathcal{L}_{\text{bond}} = \text{mean}_{(l,m) \in \mathcal{B}} \left( \left\| \vec{x}_l - \vec{x}_m \right\| - \left\| \vec{x}_l^{\text{GT}} - \vec{x}_m^{\text{GT}} \right\| \right)^2$ ，这里的 $\mathcal{B}$指的是一系列的原子对（l是起始原子的序号，m是结束原子的序号），代表的是protein-ligand bonds。相当于计算目标键长和真实键长之间的平均差距。
+        - 所以这里的计算方法为： $\mathcal{L}\_{\text{bond}} = \text{mean}\_{(l,m) \in \mathcal{B}} \left( \left\| \vec{x}\_l - \vec{x}\_m \right\| - \left\| \vec{x}\_l^{\text{GT}} - \vec{x}\_m^{\text{GT}} \right\| \right)^2$ ，这里的 $\mathcal{B}$指的是一系列的原子对（l是起始原子的序号，m是结束原子的序号），代表的是protein-ligand bonds。相当于计算目标键长和真实键长之间的平均差距。
         - 本质上也是一个MSE的loss。
     - $L_{smooth\_LDDT}$：用于比较预测的原子对之间的距离和实际原子对之间距离的差异的loss （Local Distance Difference Test），并且着重关注相近原子之间的距离预测的准确性（Local Distance Difference Test）。
         - 具体的计算伪代码为：
@@ -678,7 +678,7 @@ $\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}
                     
             - 然后，为了让这个计算分数主要考察的是相近原子之间的距离，所以对那些实际距离非常远的原子对，不加入到loss的计算（c_l_m=0）。即针对实际距离大于30Å的核苷酸原子对以及实际距离大于15Å的非核苷酸原子对不计入在内。
             - 最后，计算那些c_l_m不为0的原子对的$\epsilon_{lm}$评分的均值做为lddt的值，这个值越接近于1，则平均原子对预测的越准。将其换算成loss，为1-lddt。
-    - 最后的最后，$\mathcal{L}_{\text{diffusion}} = \frac{\hat{t}^2 + \sigma_{\text{data}}^2}{(\hat{t} + \sigma_{\text{data}})^2} \cdot \left( \mathcal{L}_{\text{MSE}} + \alpha_{\text{bond}} \cdot \mathcal{L}_{\text{bond}} \right) + \mathcal{L}_{\text{smooth\_lddt}}$
+    - 最后的最后，$\mathcal{L}\_{\text{diffusion}} = \frac{\hat{t}^2 + \sigma\_{\text{data}}^2}{(\hat{t} + \sigma\_{\text{data}})^2} \cdot \left( \mathcal{L}\_{\text{MSE}} + \alpha\_{\text{bond}} \cdot \mathcal{L}\_{\text{bond}} \right) + \mathcal{L}\_{\text{smooth\_lddt}}$
         - 这里的 $\sigma_{data}$ 是一个常数，由数据的方差决定，这里取16。
         - 这里的t^是在训练时的sampled noise level，具体的计算方法是 $\hat{t}=\sigma_{\text{data}} \cdot \exp\left( -1.2 + 1.5 \cdot \mathcal{N}(0, 1) \right)$
         - 这里的 $\alpha_{bond}$ 在初始训练的时候是0，在后面fine-tune的时候是1.
@@ -686,7 +686,7 @@ $\mathcal{L}_{\text{loss}} = \alpha_{\text{confidence}} \cdot \left( \mathcal{L}
 ## $L_{confidence}$
 
 - 最后一种loss的作用并不是用来提升模型预测结构的准确性，而是帮助模型学习如何评估自身预测的准确性。这个loss也是四种不同用于评估自身准确性loss的一个加权和。
-- 具体的公式如下： $L_{confidence}= \mathcal{L}_{\text{plddt}} + \mathcal{L}_{\text{pde}} + \mathcal{L}_{\text{resolved}} + \alpha_{\text{pae}} \cdot \mathcal{L}_{\text{pae}}$
+- 具体的公式如下： $L\_{confidence}= \mathcal{L}\_{\text{plddt}} + \mathcal{L}\_{\text{pde}} + \mathcal{L}\_{\text{resolved}} + \alpha\_{\text{pae}} \cdot \mathcal{L}\_{\text{pae}}$
 - Mini-Rollout解释：
     
     ![image.png](images/image%2074.png)
