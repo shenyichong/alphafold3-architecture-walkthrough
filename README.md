@@ -8,6 +8,48 @@ by Yichong Shen
 
 > This technical deep dive is inspired by [The Illustrated AlphaFold](https://elanapearl.github.io/blog/2024/the-illustrated-alphafold/). Special thanks to Elana Pearl for the visual resources.
 
+**📖 Read in:** [English](README.md) | [中文](README.zh.md)
+
+**💬 Discussion**: Join the conversation on [Reddit](https://www.reddit.com/r/bioinformatics/comments/1l7xcp3/alphafold_3_demystified_i_wrote_a_technical/) to discuss this analysis with the bioinformatics community.
+
+--- 
+
+## 📋 Table of Contents
+
+<details>
+<summary>Click to expand full table of contents</summary>
+
+- [🏗️ Input Preparation](#️-input-preparation)
+  - [MSA and Templates](#msa-and-templates)
+    - [Why do we need MSA?](#why-do-we-need-msa)
+    - [Why do we need Templates?](#why-do-we-need-templates)
+    - [How to obtain MSA?](#how-to-obtain-msa)
+    - [How to obtain Templates?](#how-to-obtain-templates)
+    - [How to characterize Templates?](#how-to-characterize-templates)
+  - [Atom-level Representations](#atom-level-representations)
+    - [Constructing p and q](#constructing-p-and-q)
+    - [Updating q (Atom Transformer)](#updating-q-atom-transformer)
+  - [Token-level Representations](#token-level-representations)
+    - [Token-level Single Sequence Representation](#token-level-single-sequence-representation)
+    - [Token-level Pair Representation](#token-level-pair-representation)
+- [🧠 Representation Learning](#-representation-learning)
+  - [Template Module](#template-module)
+  - [MSA Module](#msa-module)
+  - [Pairformer Module](#pairformer-module)
+- [🔮 Structure Prediction](#-structure-prediction)
+  - [Basic Concepts of Diffusion](#basic-concepts-of-diffusion)
+  - [Detailed Structure Prediction](#detailed-structure-prediction)
+    - [Sample Diffusion (Inference Process)](#sample-diffusion-inference-process)
+    - [Diffusion Module (Inference Process)](#diffusion-module-inference-process)
+- [📊 Loss Function](#-loss-function)
+  - [Distogram Loss](#distogram-loss)
+  - [Diffusion Loss](#diffusion-loss)
+  - [Confidence Loss](#confidence-loss)
+
+</details>
+
+---
+
 # Input Preparation
 
 ## How are MSA and Templates obtained?
