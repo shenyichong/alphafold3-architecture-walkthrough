@@ -37,6 +37,8 @@ by Yichong Shen
 - [Structure Prediction](#structure-prediction)
   - [Basic Concepts of Diffusion](#basic-concepts-of-diffusion)
   - [Detailed Structure Prediction](#detailed-structure-prediction)
+    - [Sample Diffusion (Inference Process)](#sample-diffusion-inference-process)
+    - [Diffusion Module (Inference Process)](#diffusion-module-inference-process)
 - [Loss Function](#loss-function)
   - [$L_{distogram}$](#ldistogram)
   - [$L_{diffusion}$](#ldiffusion)
@@ -50,12 +52,16 @@ by Yichong Shen
 
 ## How are MSA and Templates obtained?
 
-- Why do we need MSA?
+### Why do we need MSA?
 
   - Different versions of a certain type of protein existing across different species may have similar sequences and structures. By collecting these proteins together, we can observe how certain positions of a protein change with evolution.
   - Each row of the MSA represents similar proteins from different species. Conservative patterns in columns can reflect the importance of requiring specific amino acids at that position. The relationships between different columns reflect the interactions between amino acids (if two amino acids physically interact, their amino acid changes during evolution may also be correlated). Therefore, MSA is often used to enrich the representation of a single protein.
-- Why do we need Templates: Similarly, if the aforementioned MSA contains known structures, then it is very likely to help predict the structure of the current protein. Templates only focus on single-chain structures.
-- How to obtain MSA?
+
+### Why do we need Templates?
+
+  - Similarly, if the aforementioned MSA contains known structures, then it is very likely to help predict the structure of the current protein. Templates only focus on single-chain structures.
+
+### How to obtain MSA?
 
   - Use genetic search to find similar protein or RNA chains. One chain typically searches for N_msa (<16384) similar chains:
 
@@ -66,10 +72,12 @@ by Yichong Shen
   - Otherwise, it forms a diagonal matrix like this:
 
     ![image.png](images/image%202.png)
-- How to obtain Templates?
+
+### How to obtain Templates?
 
   - Use Template Search. For the generated MSA, use HMM to search for similar protein sequences in the PDB database, then select the 4 highest quality structures from these matched sequences as templates.
-- How to characterize Templates?
+
+### How to characterize Templates?
 
   - Calculate the Euclidean distance between each token and token, using discretized distance representation (specifically, values are divided into 38 intervals, ranging from 3.15Å to 50.75Å, plus an additional interval representing distances exceeding 50.75Å).
   - If certain tokens contain multiple atoms, select the central atom for distance calculation, for example, Cα is the central atom of amino acids, and C1 is the central atom of nucleotides.
