@@ -42,9 +42,9 @@ by Yichong Shen
     - [Sample Diffusion部分详解（推理过程）](#sample-diffusion部分详解推理过程)
     - [Diffusion Module部分详解（推理过程）](#diffusion-module部分详解推理过程)
 - [Loss Function](#loss-function)
-    - [$L_{distogram}$](#l_distogram)
-    - [$L_{diffusion}$](#l_diffusion)
-    - [$L_{confidence}$](#l_confidence)
+    - [$L_{distogram}$](#ldistogram)
+    - [$L_{diffusion}$](#ldiffusion)
+    - [$L_{confidence}$](#lconfidence)
 
 </details>
 
