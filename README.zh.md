@@ -42,9 +42,9 @@ by Yichong Shen
     - [Sample Diffusion部分详解（推理过程）](#sample-diffusion部分详解推理过程)
     - [Diffusion Module部分详解（推理过程）](#diffusion-module部分详解推理过程)
 - [Loss Function](#loss-function)
-    - [$L_{distogram}$](#ldistogram)
-    - [$L_{diffusion}$](#ldiffusion)
-    - [$L_{confidence}$](#lconfidence)
+    - [$L_{distogram}$](#l_distogram)
+    - [$L_{diffusion}$](#l_diffusion)
+    - [$L_{confidence}$](#l_confidence)
 
 </details>
 
@@ -653,7 +653,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
             
             ![image.png](images/image%2072.png)
             
-        - 然后计算L_mse的值：  $L_{MSE} = \frac{1}{3} \cdot \text{mean}_l \big( w_l \| \tilde{x}_l - x_l^{GT-aligned} \|^2 \big)$
+        - 然后计算L_mse的值：  $L\_{MSE} = \frac{1}{3} \cdot \text{mean}\_l \big( w_l \| \tilde{x}\_l - x_l^{GT-aligned} \|^2 \big)$
         - 注意这里是一个weighted Mean Squared Error： $w_l = 1 + f_l^{\text{is\_dna}} \alpha^{\text{dna}} + f_l^{\text{is\_rna}} \alpha^{\text{rna}} + f_l^{\text{is\_ligand}} \alpha^{\text{ligand}}$ ，其中 $\alpha^{\text{dna}} = \alpha^{\text{rna}} = 5,  \alpha^{\text{ligand}} = 10$ 。这里对RNA/DNA和ligand的权重设置的较大，意味着如果这些原子的预测准确性有更高的要求。
     - $L_{bond}$ ：用于确保配体（ligand)和主链之间的键长是合理的损失函数。
         - 为什么需要这个loss呢？原因在于扩散模型可以恢复出一个总体结构正确，但是细节不够精确的模型，比如某一个化学键变得过长或者过短。同时配体就像挂在蛋白质链边上的小饰品，你不希望这个饰品过长或者过短，而蛋白质氨基酸之间的肽键基本长度是稳定的，主链内部原子排列的本身就有比较强的约束。
@@ -665,14 +665,14 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
             ![image.png](images/image%2073.png)
             
             - 前两步计算任意两个原子之间的距离，包括预测值和实际值。
-            - 接下来计算(l,m)原子对的预测距离和实际距离的绝对差值 $\delta_{lm}$。
-            - 然后计算一个分布在[0,1]之间的评分，这个评分用于衡量 $\delta_{lm}$是否能够通过（Local Distance Difference Test）。
-                - 这里设置了4次Test，每次Test采用了不同的阈值，如果 $\delta_{lm}$ 在设定的阈值范围内，则可以认为对(l,m)这个原子对距离的预测通过了Test，那么这次的Test的评分就会大于0.5，否则不通过小于0.5.
-                - 所以每次Test设置了不同的阈值（分别为4, 2, 1, and 0.5 Å），采用sigmoid函数来实现：sigmoid(阈值 -  $\delta_{lm}$ )，下面画出了这四个Test的函数曲线：
+            - 接下来计算(l,m)原子对的预测距离和实际距离的绝对差值 $\delta\_{lm}$。
+            - 然后计算一个分布在[0,1]之间的评分，这个评分用于衡量 $\delta\_{lm}$是否能够通过（Local Distance Difference Test）。
+                - 这里设置了4次Test，每次Test采用了不同的阈值，如果 $\delta\_{lm}$ 在设定的阈值范围内，则可以认为对(l,m)这个原子对距离的预测通过了Test，那么这次的Test的评分就会大于0.5，否则不通过小于0.5.
+                - 所以每次Test设置了不同的阈值（分别为4, 2, 1, and 0.5 Å），采用sigmoid函数来实现：sigmoid(阈值 -  $\delta\_{lm}$ )，下面画出了这四个Test的函数曲线：
                     
                     ![Individual Sigmoid Terms in Smooth LDDT.png](images/Individual_Sigmoid_Terms_in_Smooth_LDDT.png)
                     
-                - 然后对这四个Test的结果进行平均，得到评分 $\epsilon_{lm}$，这是这个评分的曲线，你会发现越靠近0，这个评分越接近于1，否则越接近于0.
+                - 然后对这四个Test的结果进行平均，得到评分 $\epsilon\_{lm}$，这是这个评分的曲线，你会发现越靠近0，这个评分越接近于1，否则越接近于0.
                     
                     ![Smooth LDDT Component vs Distance Difference.png](images/Smooth_LDDT_Component_vs_Distance_Difference.png)
                     
@@ -761,7 +761,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
                     - 计算对齐误差，即预测的相对位置和真实相对位置之间的差别，使用欧几里得距离来进行计算。如果e_i_j比较小，那么预测的token i 和 j 之间的关系和真实的token i 和 j 之间的关系对齐的好，否则对齐的差。
                     - 注意，这里的(i,j)是不可交换的，e_i_j和e_j_i是不同的。
         - PAE Loss 计算流程：
-            - 通过confidence head计算得到的 $\mathbf{p}_{ij}^{\text{pae}}$ 为 b_pae=64 维度的向量，表示e_i_j 落到64个bin（从0埃到32埃，每0.5埃一个阶梯）中的概率。
+            - 通过confidence head计算得到的 $\mathbf{p}\_{ij}^{\text{pae}}$ 为 b_pae=64 维度的向量，表示e_i_j 落到64个bin（从0埃到32埃，每0.5埃一个阶梯）中的概率。
             - 为了使得 $\mathbf{p}_{ij}^{\text{pae}}$ 的分布更加接近于实际的 e_i_j 的值，采用交叉熵的loss函数来对齐二者，使得$\mathbf{p}_{ij}^{\text{pae}}$能够更好地预测实际的e_i_j的值。（注意：这里loss的设计不是最小化e_i_j的值，那可能是为了获得更好的结构预测精度；而是通过交叉熵loss来更好的让预测的概率$\mathbf{p}_{ij}^{\text{pae}}$和e_i_j的结果更加的接近，从而更好地预测e_i_j的大小；e_i_j越大表明模型认为这两个位置的相对构象存在较大的不确定性，e_i_j越小意味着对于那两个位置的相对构想更有信心）
             - 所以最终PAE的loss定义为：（注意这里的e_b_i_j和前面的e_i_j不同，如果e_i_j落在对应的bin b，则这个对应的e_b_i_j是1，否则e_b_i_j是0）
                 
@@ -775,9 +775,9 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
     - Predicted Distance Error(PDE)：token对之间代表原子绝对距离的置信度预测。
         - 除了对齐误差，模型同样也需要预测重要原子之间的绝对距离的预测误差。
         - 这里的distance error的计算方式比较简单，如下：
-            - 首先，计算模型预测的 token i 和token j的代表性原子之间的绝对距离：$d_{ij}^{\text{pred}}$
-            - 然后，计算模型的真实的 token i 和 token j 的代表性原子之间的绝对距离：$d_{ij}^{\text{gt}}$
-            - 最后，直接计算二者的绝对差异：$e_{ij} = \left| d_{ij}^{\text{pred}} - d_{ij}^{\text{gt}} \right|$
+            - 首先，计算模型预测的 token i 和token j的代表性原子之间的绝对距离：$d\_{ij}^{\text{pred}}$
+            - 然后，计算模型的真实的 token i 和 token j 的代表性原子之间的绝对距离：$d\_{ij}^{\text{gt}}$
+            - 最后，直接计算二者的绝对差异：$e\_{ij} = \left| d\_{ij}^{\text{pred}} - d\_{ij}^{\text{gt}} \right|$
         - 类似的，通过confidence head预测出$\mathbf{p}_{ij}^{\text{pae}}$的结果也同样是64维的向量，表示e_i_j 落到64个bin（从0埃到32埃，每0.5埃一个阶梯）中的概率。
         - 类似的，然后通过交叉熵loss来对齐二者，得到L_pde:
             
