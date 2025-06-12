@@ -653,8 +653,8 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
             
             ![image.png](images/image%2072.png)
             
-        - 然后计算L_mse的值：  $L_{MSE} = \frac{1}{3} \cdot \text{mean}_l \big( w_l \| \tilde{x}_l - x_l^{GT-aligned} \|^2 \big)$
-        - 注意这里是一个weighted Mean Squared Error： $w_l = 1 + f_l^{\text{is\_dna}} \alpha^{\text{dna}} + f_l^{\text{is\_rna}} \alpha^{\text{rna}} + f_l^{\text{is\_ligand}} \alpha^{\text{ligand}}$ ，其中 $\alpha^{\text{dna}} = \alpha^{\text{rna}} = 5,  \alpha^{\text{ligand}} = 10$ 。这里对RNA/DNA和ligand的权重设置的较大，意味着如果这些原子的预测准确性有更高的要求。
+        - 然后计算L_mse的值：$L_{MSE} = \frac{1}{3} \cdot \text{mean}_l \big( w_l \| \tilde{x}_l - x_l^{GT-aligned} \|^2 \big)$
+        - 注意这里是一个weighted Mean Squared Error： $w_l = 1 + f_l^{\text{is-dna}} \alpha^{\text{dna}} + f_l^{\text{is-rna}} \alpha^{\text{rna}} + f_l^{\text{is-ligand}} \alpha^{\text{ligand}}$ ，其中 $\alpha^{\text{dna}} = \alpha^{\text{rna}} = 5,  \alpha^{\text{ligand}} = 10$ 。这里对RNA/DNA和ligand的权重设置的较大，意味着如果这些原子的预测准确性有更高的要求。
     - $L_{bond}$ ：用于确保配体（ligand)和主链之间的键长是合理的损失函数。
         - 为什么需要这个loss呢？原因在于扩散模型可以恢复出一个总体结构正确，但是细节不够精确的模型，比如某一个化学键变得过长或者过短。同时配体就像挂在蛋白质链边上的小饰品，你不希望这个饰品过长或者过短，而蛋白质氨基酸之间的肽键基本长度是稳定的，主链内部原子排列的本身就有比较强的约束。
         - 所以这里的计算方法为： $\mathcal{L}\_{\text{bond}} = \text{mean}\_{(l,m) \in \mathcal{B}} \left( \left\| \vec{x}\_l - \vec{x}\_m \right\| - \left\| \vec{x}\_l^{\text{GT}} - \vec{x}\_m^{\text{GT}} \right\| \right)^2$ ，这里的 $\mathcal{B}$指的是一系列的原子对（l是起始原子的序号，m是结束原子的序号），代表的是protein-ligand bonds。相当于计算目标键长和真实键长之间的平均差距。
@@ -678,7 +678,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
                     
             - 然后，为了让这个计算分数主要考察的是相近原子之间的距离，所以对那些实际距离非常远的原子对，不加入到loss的计算（c_l_m=0）。即针对实际距离大于30Å的核苷酸原子对以及实际距离大于15Å的非核苷酸原子对不计入在内。
             - 最后，计算那些c_l_m不为0的原子对的$\epsilon_{lm}$评分的均值做为lddt的值，这个值越接近于1，则平均原子对预测的越准。将其换算成loss，为1-lddt。
-    - 最后的最后，$\mathcal{L}\_{\text{diffusion}} = \frac{\hat{t}^2 + \sigma\_{\text{data}}^2}{(\hat{t} + \sigma\_{\text{data}})^2} \cdot \left( \mathcal{L}\_{\text{MSE}} + \alpha\_{\text{bond}} \cdot \mathcal{L}\_{\text{bond}} \right) + \mathcal{L}\_{\text{smooth\_lddt}}$
+    - 最后的最后，$\mathcal{L}\_{\text{diffusion}} = \frac{\hat{t}^2 + \sigma\_{\text{data}}^2}{(\hat{t} + \sigma\_{\text{data}})^2} \cdot \left( \mathcal{L}\_{\text{MSE}} + \alpha\_{\text{bond}} \cdot \mathcal{L}\_{\text{bond}} \right) + \mathcal{L}\_{\text{smooth-lddt}}$
         - 这里的 $\sigma_{data}$ 是一个常数，由数据的方差决定，这里取16。
         - 这里的t^是在训练时的sampled noise level，具体的计算方法是 $\hat{t}=\sigma_{\text{data}} \cdot \exp\left( -1.2 + 1.5 \cdot \mathcal{N}(0, 1) \right)$
         - 这里的 $\alpha_{bond}$ 在初始训练的时候是0，在后面fine-tune的时候是1.
@@ -704,11 +704,11 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
                 
                 - 其中 $d_{lm}$是mini-rollout的预测的原子l和m之间的距离。
                 - ${m}\in{R}$ ，m原子的选择是基于此训练序列的真实三维结构来获取：1）m的距离在l的一定就近范围内（30埃或者15埃，取决于m的原子类型）；2）m只选择位于聚合物上的原子（小分子和配体不考虑）；3）一个token只考虑一个原子，针对标准氨基酸或者核苷酸中的原子，m都是用其代表原子（ $C_\alpha$ 或 $C_1$）来表示。
-                - 然后针对每一对(l,m)，进行LDDT（Local Distance Difference Test）：$\frac{1}{4} \sum_{c \in \{0.5, 1, 2, 4\}} d_{lm} < c$，如果l和m在真实距离中比较近，那么他们在预测结果中应该也足够近，这里设置了4个阈值，如果都满足，则LDDT则为1，如果都不满足则为0。
+                - 然后针对每一对(l,m)，进行LDDT（Local Distance Difference Test）：$\frac{1}{4} \sum_{c \in \{0.5, 1, 2, 4\}} d\_{lm} < c$，如果l和m在真实距离中比较近，那么他们在预测结果中应该也足够近，这里设置了4个阈值，如果都满足，则LDDT则为1，如果都不满足则为0。
                 - 最后，相当于针对所有在l附近的m计算得到的LDDT值进行加合，得到一个l原子的$lddt_l$值，其大小可以衡量在l原子上模型的预测结构和真实结构的差异，注意这是一个没有经过归一化的值。
-        - 计算confidence head输出的此原子的LDDT的概率分布：$p_l^{\text{plddt}}$（训练和预测时）
-            - 这里暂时忽略具体confidence的计算过程（后续会详细说明），需要知道的是这里的$p_l^{\text{plddt}}$是在l原子处经过confidence head计算得到的，对$lddt_l$值的分布的一个估计。
-            - 这里$p_l^{\text{plddt}}$是一个50维的向量，将0～100分成了50bin，是一个softmax的结果，预测了$lddt_l$值落在其中特定bin的概率分布。
+        - 计算confidence head输出的此原子的LDDT的概率分布： $p_l^{\text{plddt}}$（训练和预测时）
+            - 这里暂时忽略具体confidence的计算过程（后续会详细说明），需要知道的是这里的 $p_l^{\text{plddt}}$ 是在l原子处经过confidence head计算得到的，对 $lddt_l$ 值的分布的一个估计。
+            - 这里 $p_l^{\text{plddt}}$ 是一个50维的向量，将0～100分成了50bin，是一个softmax的结果，预测了$lddt_l$值落在其中特定bin的概率分布。
             - 注意这里的计算完全不涉及任何的真实结构，都是基于前面的trunk相关表征进行的预测。
         - 计算整个的 $L_{plddt}$（训练时）：
             - 那么这里这个loss的优化目标就不是最大化 $lddt_l$，而是为了更加准确地预测$lddt_l$。
