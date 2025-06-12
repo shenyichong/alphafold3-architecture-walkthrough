@@ -590,7 +590,7 @@ by Yichong Shen
     
     ![image.png](images/bed1bf65-6bec-4b73-acf5-b2cba14de665.png)
     
-    - 最后，我们返回到Atom空间，使用更新之后的 a_i 来将其广播到每一个atom上，以更新atom-level的single表征 q_l。
+    - 现在，我们返回到Atom空间，使用更新之后的 a_i 来将其广播到每一个atom上，以更新atom-level的single表征 q_l。
         
         ![image.png](images/image%2067.png)
         
@@ -633,9 +633,9 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
     - 这里y_b_i_j指的是将第i个token和第j个token之间的距离均匀划分到64个桶中去（从2埃到22埃），y_b_i_j指的就是在这64个桶中的某一个桶，这里y_b_i_j使用one-hot编码表示实际的结果落到某一个特定的桶中。
     - p_b_i_j指的是对第i个token和第j个token之间的距离的值落到某一个桶中的概率，是一个softmax之后的结果。
     - 对于任意一个token对（i,j)，求其预测距离和实际距离之间的差别，采用cross-entropy的方式：
-        - 计算 $\sum_{b=1}^{64} y_{ij}^b \log p_{ij}^b=\log p_{ij}^{\text{target\_bin}}$
+        - 计算 $\sum_{b=1}^{64} y_{ij}^b \log p_{ij}^b=\log p_{ij}^{\text{target\textunderscore bin}}$
     - 对于所有的token对，计算los的平均值：
-        - 计算 $-\frac{1}{N_{\text{res}}^2} \sum_{i,j} \log p_{ij}^{\text{target\_bin}}$ ，得到最后的L_distogram的loss的值。
+        - 计算 $-\frac{1}{N_{\text{res}}^2} \sum_{i,j} \log p_{ij}^{\text{target\textunderscore bin}}$ ，得到最后的L_distogram的loss的值。
 
 ## $L_{diffusion}$
 
