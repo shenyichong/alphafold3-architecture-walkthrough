@@ -619,7 +619,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot L\_{\text{confid
 $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{L}\_{\text{plddt}} + \mathcal{L}\_{\text{pde}} + \mathcal{L}\_{\text{resolved}} + \alpha\_{\text{pae}} \cdot \mathcal{L}\_{\text{pae}} \right) + \alpha\_{\text{diffusion}} \cdot \mathcal{L}\_{\text{diffusion}} + \alpha\_{\text{distogram}} \cdot \mathcal{L}\_{\text{distogram}}$
 
 - L_distogram: 用于评估预测出来的 token-level 的 distogram（也就是token-token之间的距离）是否准确。
-- L_diffusion: 用于评估预测出来atom-level 的 distogram （也就是atom-atome之间的关系）是否准确，同时还包含了一些额外的terms，包括优先考虑就近原子之间的关系以及对蛋白质-配体之间的键的原子进行处理。
+- L_diffusion: 用于评估预测出来atom-level 的 distogram （也就是atom-atom之间的关系）是否准确，同时还包含了一些额外的terms，包括优先考虑就近原子之间的关系以及对蛋白质-配体之间的键的原子进行处理。
 - L_confidence: 用于评估模型的关于对自己预测出来的结构哪些是准确或者不准确的self-awareness的准确性。
 
 ## $L_{distogram}$
@@ -659,7 +659,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
         - 为什么需要这个loss呢？原因在于扩散模型可以恢复出一个总体结构正确，但是细节不够精确的模型，比如某一个化学键变得过长或者过短。同时配体就像挂在蛋白质链边上的小饰品，你不希望这个饰品过长或者过短，而蛋白质氨基酸之间的肽键基本长度是稳定的，主链内部原子排列的本身就有比较强的约束。
         - 所以这里的计算方法为： $\mathcal{L}\_{\text{bond}} = \text{mean}\_{(l,m) \in \mathcal{B}} \left( \left\| \vec{x}\_l - \vec{x}\_m \right\| - \left\| \vec{x}\_l^{\text{GT}} - \vec{x}\_m^{\text{GT}} \right\| \right)^2$ ，这里的 $\mathcal{B}$指的是一系列的原子对（l是起始原子的序号，m是结束原子的序号），代表的是protein-ligand bonds。相当于计算目标键长和真实键长之间的平均差距。
         - 本质上也是一个MSE的loss。
-    - $L_{smooth\_LDDT}$：用于比较预测的原子对之间的距离和实际原子对之间距离的差异的loss （Local Distance Difference Test），并且着重关注相近原子之间的距离预测的准确性（Local Distance Difference Test）。
+    - $L_{smooth-LDDT}$：用于比较预测的原子对之间的距离和实际原子对之间距离的差异的loss （Local Distance Difference Test），并且着重关注相近原子之间的距离预测的准确性（Local Distance Difference Test）。
         - 具体的计算伪代码为：
             
             ![image.png](images/image%2073.png)
@@ -702,13 +702,13 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
                 
                 ![image.png](images/image%2075.png)
                 
-                - 其中 $d_{lm}$是mini-rollout的预测的原子l和m之间的距离。
+                - 其中 $d_{lm}$ 是mini-rollout的预测的原子l和m之间的距离。
                 - ${m}\in{R}$ ，m原子的选择是基于此训练序列的真实三维结构来获取：1）m的距离在l的一定就近范围内（30埃或者15埃，取决于m的原子类型）；2）m只选择位于聚合物上的原子（小分子和配体不考虑）；3）一个token只考虑一个原子，针对标准氨基酸或者核苷酸中的原子，m都是用其代表原子（ $C_\alpha$ 或 $C_1$）来表示。
                 - 然后针对每一对(l,m)，进行LDDT（Local Distance Difference Test）： $\frac{1}{4} \sum_{c \in \{0.5, 1, 2, 4\}} d\_{lm} < c$，如果l和m在真实距离中比较近，那么他们在预测结果中应该也足够近，这里设置了4个阈值，如果都满足，则LDDT则为1，如果都不满足则为0。
-                - 最后，相当于针对所有在l附近的m计算得到的LDDT值进行加合，得到一个l原子的$lddt_l$值，其大小可以衡量在l原子上模型的预测结构和真实结构的差异，注意这是一个没有经过归一化的值。
+                - 最后，相当于针对所有在l附近的m计算得到的LDDT值进行加合，得到一个l原子的 $lddt_l$ 值，其大小可以衡量在l原子上模型的预测结构和真实结构的差异，注意这是一个没有经过归一化的值。
         - 计算confidence head输出的此原子的LDDT的概率分布： $p_l^{\text{plddt}}$（训练和预测时）
             - 这里暂时忽略具体confidence的计算过程（后续会详细说明），需要知道的是这里的 $p_l^{\text{plddt}}$ 是在l原子处经过confidence head计算得到的，对 $lddt_l$ 值的分布的一个估计。
-            - 这里 $p_l^{\text{plddt}}$ 是一个50维的向量，将0～100分成了50bin，是一个softmax的结果，预测了$lddt_l$值落在其中特定bin的概率分布。
+            - 这里 $p_l^{\text{plddt}}$ 是一个50维的向量，将0～100分成了50bin，是一个softmax的结果，预测了 $lddt_l$ 值落在其中特定bin的概率分布。
             - 注意这里的计算完全不涉及任何的真实结构，都是基于前面的trunk相关表征进行的预测。
         - 计算整个的 $L_{plddt}$（训练时）：
             - 那么这里这个loss的优化目标就不是最大化 $lddt_l$，而是为了更加准确地预测 $lddt_l$ 。

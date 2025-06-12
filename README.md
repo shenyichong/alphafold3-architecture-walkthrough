@@ -644,7 +644,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
     - Why is this loss needed? The reason is that diffusion models can recover a model with correct overall structure but insufficient detail precision, such as certain chemical bonds becoming too long or too short. At the same time, ligands are like small ornaments hanging on the protein chain - you don't want these ornaments to be too long or too short, while peptide bonds between protein amino acids have basically stable lengths, and the internal atomic arrangement of the main chain itself has relatively strong constraints.
     - So the calculation method here is: $\mathcal{L}\_{\text{bond}} = \text{mean}\_{(l,m) \in \mathcal{B}} \left( \left\| \vec{x}\_l - \vec{x}\_m \right\| - \left\| \vec{x}\_l^{\text{GT}} - \vec{x}\_m^{\text{GT}} \right\| \right)^2$, where $\mathcal{B}$ refers to a series of atom pairs (l is the starting atom index, m is the ending atom index), representing protein-ligand bonds. This is equivalent to calculating the average difference between target bond length and actual bond length.
     - Essentially, this is also an MSE loss.
-  - $L_{smooth\_LDDT}$: Loss for comparing the difference between predicted atomic pair distances and actual atomic pair distances (Local Distance Difference Test), with emphasis on the accuracy of distance predictions between nearby atoms.
+  - $L_{smooth-LDDT}$: Loss for comparing the difference between predicted atomic pair distances and actual atomic pair distances (Local Distance Difference Test), with emphasis on the accuracy of distance predictions between nearby atoms.
     - The specific calculation pseudocode is:
 
       ![image.png](images/image%2073.png)
