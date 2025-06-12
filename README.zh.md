@@ -711,20 +711,20 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
             - 这里 $p_l^{\text{plddt}}$ 是一个50维的向量，将0～100分成了50bin，是一个softmax的结果，预测了$lddt_l$值落在其中特定bin的概率分布。
             - 注意这里的计算完全不涉及任何的真实结构，都是基于前面的trunk相关表征进行的预测。
         - 计算整个的 $L_{plddt}$（训练时）：
-            - 那么这里这个loss的优化目标就不是最大化 $lddt_l$，而是为了更加准确地预测$lddt_l$。
-            - 而应该是实际的$lddt_l$值和模型预测的$lddt_l$分布要始终对齐：如果实际的$lddt_l$值低（模型结构预测的不准）那么模型的预测的$lddt_l$ 的分布$p_l^{\text{plddt}}$结果中，落在数值较小的bin中的概率就更大；如果实际的$lddt_l$值高（模型结构预测的准）那么模型的预测的$lddt_l$ 的分布$p_l^{\text{plddt}}$结果中，落在数值较大的bin中的概率就更大。
+            - 那么这里这个loss的优化目标就不是最大化 $lddt_l$，而是为了更加准确地预测 $lddt_l$ 。
+            - 而应该是实际的 $lddt_l$ 值和模型预测的 $lddt_l$ 分布要始终对齐：如果实际的 $lddt_l$ 值低（模型结构预测的不准）那么模型的预测的 $lddt_l$ 的分布 $p_l^{\text{plddt}}$ 结果中，落在数值较小的bin中的概率就更大；如果实际的     $lddt_l$ 值高（模型结构预测的准）那么模型的预测的 $lddt_l$ 的分布 $p_l^{\text{plddt}}$ 结果中，落在数值较大的bin中的概率就更大。
             - 所以使用交叉熵loss来对齐这两者的差异，这也就能够保证模型真实的LDDT分布和预测的LDDT分布是尽量一致的： $\sum_{b=1}^{50} \text{lddt}_l^b \log p_l^b$ 。
             - 最后，因为要计算整体的loss，所以在所有原子上进行平均，得到最终计算的方法：
                 
                 ![image.png](images/image%2076.png)
                 
         - 计算pLDDT的值（预测时）：
-            - 另外，在预测的时候，模型输出的单个原子的pLDDT的值时，计算方式为：$p_l^{\text{plddt}} * V_{bin}$，得到一个0～100之间的标量，代表了模型对当前位置l原子的lddt的一个预测值。当这个原子周边的原子和它距离都比较近的时候lddt值大，代表模型对当前l原子位置预测的置信度就越高，否则对当前l原子位置预测的置信度就越低。
-            - 原因在于，经过前面的loss函数的优化，$p_l^{\text{plddt}}$是一个对l原子的预测效果有较好评估能力的分布了。所以就可以相信$p_l^{\text{plddt}}$对lddt分布的估计，可以相当于求期望的方式来求lddt的预测值。
+            - 另外，在预测的时候，模型输出的单个原子的pLDDT的值时，计算方式为： $p_l^{\text{plddt}} * V_{bin}$ ，得到一个0～100之间的标量，代表了模型对当前位置l原子的lddt的一个预测值。当这个原子周边的原子和它距离都比较近的时候lddt值大，代表模型对当前l原子位置预测的置信度就越高，否则对当前l原子位置预测的置信度就越低。
+            - 原因在于，经过前面的loss函数的优化， $p_l^{\text{plddt}}$ 是一个对l原子的预测效果有较好评估能力的分布了。所以就可以相信 $p_l^{\text{plddt}}$ 对lddt分布的估计，可以相当于求期望的方式来求lddt的预测值。
     - Predicted Aligned Error(PAE)：token对之间的对齐误差的置信度预测（以原子对的距离来计算）。
         - 一些概念和方法解释：
             - **reference frame:** 一个token的reference frame使用三个原子的坐标来进行表示: $\Phi_i = (\vec{a}_i, \vec{b}_i, \vec{c}_i)$， 这个frame的作用是用于定义一个token i 的局部参考坐标系，用于与token j 建立联系。针对不同的token，referecne frame的三个原子的选择是不同的：
-                - 针对蛋白质token，或者残基，其reference frame是：$(\text{N}, \text{C}^\alpha, \text{C})$
+                - 针对蛋白质token，或者残基，其reference frame是： $(\text{N}, \text{C}^\alpha, \text{C})$
                 - 针对DNA或者RNA的token，其reference frame是： $(\text{C1}', \text{C3}', \text{C4}')$
                 - 针对其他小分子，其token可能只包含一个原子，那么选择b_i为这个原子本身，然后选择最近的atom为a_i，第二近的atom为c_i。
                 - 例外：如果选择的三个原子几乎在一条直线上（它们之间的夹脚小于25度），或者在实际的链里找不到这三个原子（比如钠离子只有一个原子），那么这个frame被定义为无效frame，后续不参与计算PAE。
@@ -748,13 +748,13 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
                         - 首先，将x平移，使得b成为原点。
                         - 然后，进行投影，计算d在每个基向量上的投影，即（d*e1, d*e2, d*e3）。
                         - 最后，就得到了x在坐标系$\Phi$中的新坐标：x_transformed.
-            - $\text{computeAlignmentError}(\{\vec{x}_i\}, \{\vec{x}_i^\text{true}\}, \{\Phi_i\}, \{\Phi_i^\text{true}\}, \epsilon = 1e^{-8} \, \text{\AA}^2)$：计算token i 和 token j 之间的对齐误差。
+            - $\text{computeAlignmentError}(\{\vec{x}_i\}, \{\vec{x}_i^\text{true}\}, \{\Phi_i\}, \{\Phi_i^\text{true}\}, \epsilon = 1e^{-8} \, \text{Å}^2)$：计算token i 和 token j 之间的对齐误差。
                 
                 ![image.png](images/image%2078.png)
                 
                 - 输入：
                     - x_i 指的是预测的针对token i 的代表性原子的坐标，x_true_i 指的是真实的token i 的代表性原子的坐标。
-                    - $\Phi_i$指的是预测的针对token i 的reference frame，$\Phi_i^\text{true}$指的是真实的token i 的reference frame。
+                    - $\Phi_i$指的是预测的针对token i 的reference frame， $\Phi_i^\text{true}$ 指的是真实的token i 的reference frame。
                 - 计算流程：
                     - token对(i, j)之间关系的预测结果：在 token i 的 reference frame 局部坐标系下，计算token j 的代表性原子在这个坐标系中的坐标，相当于计算token j 相对于 token i的相对关系。
                     - token对(i, j)之间关系的真实结果：在 token i 的 reference frame 局部坐标系下，计算token j 的代表性原子在这个坐标系中的坐标，相当于计算token j 相对于 token i的相对关系。
@@ -762,7 +762,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
                     - 注意，这里的(i,j)是不可交换的，e_i_j和e_j_i是不同的。
         - PAE Loss 计算流程：
             - 通过confidence head计算得到的 $\mathbf{p}\_{ij}^{\text{pae}}$ 为 b_pae=64 维度的向量，表示e_i_j 落到64个bin（从0埃到32埃，每0.5埃一个阶梯）中的概率。
-            - 为了使得 $\mathbf{p}_{ij}^{\text{pae}}$ 的分布更加接近于实际的 e_i_j 的值，采用交叉熵的loss函数来对齐二者，使得$\mathbf{p}_{ij}^{\text{pae}}$能够更好地预测实际的e_i_j的值。（注意：这里loss的设计不是最小化e_i_j的值，那可能是为了获得更好的结构预测精度；而是通过交叉熵loss来更好的让预测的概率$\mathbf{p}_{ij}^{\text{pae}}$和e_i_j的结果更加的接近，从而更好地预测e_i_j的大小；e_i_j越大表明模型认为这两个位置的相对构象存在较大的不确定性，e_i_j越小意味着对于那两个位置的相对构想更有信心）
+            - 为了使得 $\mathbf{p}\_{ij}^{\text{pae}}$ 的分布更加接近于实际的 e_i_j 的值，采用交叉熵的loss函数来对齐二者，使得 $\mathbf{p}\_{ij}^{\text{pae}}$ 能够更好地预测实际的e_i_j的值。（注意：这里loss的设计不是最小化e_i_j的值，那可能是为了获得更好的结构预测精度；而是通过交叉熵loss来更好的让预测的概率 $\mathbf{p}\_{ij}^{\text{pae}}$ 和e_i_j的结果更加的接近，从而更好地预测e_i_j的大小；e_i_j越大表明模型认为这两个位置的相对构象存在较大的不确定性，e_i_j越小意味着对于那两个位置的相对构想更有信心）
             - 所以最终PAE的loss定义为：（注意这里的e_b_i_j和前面的e_i_j不同，如果e_i_j落在对应的bin b，则这个对应的e_b_i_j是1，否则e_b_i_j是0）
                 
                 ![image.png](images/image%2079.png)
@@ -775,10 +775,10 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
     - Predicted Distance Error(PDE)：token对之间代表原子绝对距离的置信度预测。
         - 除了对齐误差，模型同样也需要预测重要原子之间的绝对距离的预测误差。
         - 这里的distance error的计算方式比较简单，如下：
-            - 首先，计算模型预测的 token i 和token j的代表性原子之间的绝对距离：$d\_{ij}^{\text{pred}}$
-            - 然后，计算模型的真实的 token i 和 token j 的代表性原子之间的绝对距离：$d\_{ij}^{\text{gt}}$
-            - 最后，直接计算二者的绝对差异：$e\_{ij} = \left| d\_{ij}^{\text{pred}} - d\_{ij}^{\text{gt}} \right|$
-        - 类似的，通过confidence head预测出$\mathbf{p}_{ij}^{\text{pae}}$的结果也同样是64维的向量，表示e_i_j 落到64个bin（从0埃到32埃，每0.5埃一个阶梯）中的概率。
+            - 首先，计算模型预测的 token i 和token j的代表性原子之间的绝对距离： $d\_{ij}^{\text{pred}}$
+            - 然后，计算模型的真实的 token i 和 token j 的代表性原子之间的绝对距离： $d\_{ij}^{\text{gt}}$
+            - 最后，直接计算二者的绝对差异： $e\_{ij} = \left| d\_{ij}^{\text{pred}} - d\_{ij}^{\text{gt}} \right|$
+        - 类似的，通过confidence head预测出 $\mathbf{p}\_{ij}^{\text{pae}}$ 的结果也同样是64维的向量，表示e_i_j 落到64个bin（从0埃到32埃，每0.5埃一个阶梯）中的概率。
         - 类似的，然后通过交叉熵loss来对齐二者，得到L_pde:
             
             ![image.png](images/image%2081.png)

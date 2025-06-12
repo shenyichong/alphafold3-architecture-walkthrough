@@ -740,7 +740,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
             - First, translate x so that b becomes the origin.
             - Then, perform projection, calculating d's projection on each basis vector, i.e., (d*e1, d*e2, d*e3).
             - Finally, get the new coordinates of x in coordinate system $\Phi$: x_transformed.
-      - $\text{computeAlignmentError}(\{\vec{x}\_i\}, \{\vec{x}\_i^\text{true}\}, \{\Phi_i\}, \{\Phi_i^\text{true}\}, \epsilon = 1e^{-8} \, \text{\AA}^2)$: Calculate alignment error between token i and token j.
+      - $\text{computeAlignmentError}(\{\vec{x}\_i\}, \{\vec{x}\_i^\text{true}\}, \{\Phi_i\}, \{\Phi_i^\text{true}\}, \epsilon = 1e^{-8} \, \text{Å}^2)$: Calculate alignment error between token i and token j.
 
         ![image.png](images/image%2078.png)
 
@@ -755,7 +755,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
     - PAE Loss calculation process:
 
       - $\mathbf{p}_{ij}^{\text{pae}}$ calculated through confidence head is a b_pae=64 dimensional vector, representing the probability that e_i_j falls into 64 bins (from 0Å to 32Å, with 0.5Å steps).
-      - To make the distribution of $\mathbf{p}_{ij}^{\text{pae}}$ closer to the actual value of e_i_j, use cross-entropy loss function to align the two, so that $\mathbf{p}_{ij}^{\text{pae}}$ can better predict the actual value of e_i_j. (Note: The loss design here is not to minimize the value of e_i_j, which might be for better structural prediction accuracy; but to better align the predicted probability $\mathbf{p}_{ij}^{\text{pae}}$ with the result of e_i_j through cross-entropy loss, thus better predicting the magnitude of e_i_j; larger e_i_j indicates the model believes there is greater uncertainty in the relative conformation of these two positions, smaller e_i_j means more confidence in the relative conformation of those two positions)
+      - To make the distribution of $\mathbf{p}\_{ij}^{\text{pae}}$ closer to the actual value of e_i_j, use cross-entropy loss function to align the two, so that $\mathbf{p}\_{ij}^{\text{pae}}$ can better predict the actual value of e_i_j. (Note: The loss design here is not to minimize the value of e_i_j, which might be for better structural prediction accuracy; but to better align the predicted probability $\mathbf{p}\_{ij}^{\text{pae}}$ with the result of e_i_j through cross-entropy loss, thus better predicting the magnitude of e_i_j; larger e_i_j indicates the model believes there is greater uncertainty in the relative conformation of these two positions, smaller e_i_j means more confidence in the relative conformation of those two positions)
       - So the final PAE loss is defined as: (Note that e_b_i_j here is different from the previous e_i_j. If e_i_j falls in the corresponding bin b, then the corresponding e_b_i_j is 1, otherwise e_b_i_j is 0)
 
         ![image.png](images/image%2079.png)
