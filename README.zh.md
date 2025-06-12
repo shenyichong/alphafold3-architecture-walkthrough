@@ -653,7 +653,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
             
             ![image.png](images/image%2072.png)
             
-        - 然后计算L_mse的值：$L_{MSE} = \frac{1}{3} \cdot \text{mean}_l \big( w_l \| \tilde{x}_l - x_l^{GT-aligned} \|^2 \big)$
+        - 然后计算L_mse的值： $L_{MSE} = \frac{1}{3} \cdot \text{mean}_l \big( w_l \| \tilde{x}_l - x_l^{GT-aligned} \|^2 \big)$
         - 注意这里是一个weighted Mean Squared Error： $w_l = 1 + f_l^{\text{is-dna}} \alpha^{\text{dna}} + f_l^{\text{is-rna}} \alpha^{\text{rna}} + f_l^{\text{is-ligand}} \alpha^{\text{ligand}}$ ，其中 $\alpha^{\text{dna}} = \alpha^{\text{rna}} = 5,  \alpha^{\text{ligand}} = 10$ 。这里对RNA/DNA和ligand的权重设置的较大，意味着如果这些原子的预测准确性有更高的要求。
     - $L_{bond}$ ：用于确保配体（ligand)和主链之间的键长是合理的损失函数。
         - 为什么需要这个loss呢？原因在于扩散模型可以恢复出一个总体结构正确，但是细节不够精确的模型，比如某一个化学键变得过长或者过短。同时配体就像挂在蛋白质链边上的小饰品，你不希望这个饰品过长或者过短，而蛋白质氨基酸之间的肽键基本长度是稳定的，主链内部原子排列的本身就有比较强的约束。
@@ -666,7 +666,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
             
             - 前两步计算任意两个原子之间的距离，包括预测值和实际值。
             - 接下来计算(l,m)原子对的预测距离和实际距离的绝对差值 $\delta\_{lm}$。
-            - 然后计算一个分布在[0,1]之间的评分，这个评分用于衡量 $\delta\_{lm}$是否能够通过（Local Distance Difference Test）。
+            - 然后计算一个分布在[0,1]之间的评分，这个评分用于衡量 $\delta\_{lm}$ 是否能够通过（Local Distance Difference Test）。
                 - 这里设置了4次Test，每次Test采用了不同的阈值，如果 $\delta\_{lm}$ 在设定的阈值范围内，则可以认为对(l,m)这个原子对距离的预测通过了Test，那么这次的Test的评分就会大于0.5，否则不通过小于0.5.
                 - 所以每次Test设置了不同的阈值（分别为4, 2, 1, and 0.5 Å），采用sigmoid函数来实现：sigmoid(阈值 -  $\delta\_{lm}$ )，下面画出了这四个Test的函数曲线：
                     
@@ -677,8 +677,8 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
                     ![Smooth LDDT Component vs Distance Difference.png](images/Smooth_LDDT_Component_vs_Distance_Difference.png)
                     
             - 然后，为了让这个计算分数主要考察的是相近原子之间的距离，所以对那些实际距离非常远的原子对，不加入到loss的计算（c_l_m=0）。即针对实际距离大于30Å的核苷酸原子对以及实际距离大于15Å的非核苷酸原子对不计入在内。
-            - 最后，计算那些c_l_m不为0的原子对的$\epsilon_{lm}$评分的均值做为lddt的值，这个值越接近于1，则平均原子对预测的越准。将其换算成loss，为1-lddt。
-    - 最后的最后，$\mathcal{L}\_{\text{diffusion}} = \frac{\hat{t}^2 + \sigma\_{\text{data}}^2}{(\hat{t} + \sigma\_{\text{data}})^2} \cdot \left( \mathcal{L}\_{\text{MSE}} + \alpha\_{\text{bond}} \cdot \mathcal{L}\_{\text{bond}} \right) + \mathcal{L}\_{\text{smooth-lddt}}$
+            - 最后，计算那些c_l_m不为0的原子对的 $\epsilon\_{lm}$ 评分的均值做为lddt的值，这个值越接近于1，则平均原子对预测的越准。将其换算成loss，为1-lddt。
+    - 最后的最后， $\mathcal{L}\_{\text{diffusion}} = \frac{\hat{t}^2 + \sigma\_{\text{data}}^2}{(\hat{t} + \sigma\_{\text{data}})^2} \cdot \left( \mathcal{L}\_{\text{MSE}} + \alpha\_{\text{bond}} \cdot \mathcal{L}\_{\text{bond}} \right) + \mathcal{L}\_{\text{smooth-lddt}}$
         - 这里的 $\sigma_{data}$ 是一个常数，由数据的方差决定，这里取16。
         - 这里的t^是在训练时的sampled noise level，具体的计算方法是 $\hat{t}=\sigma_{\text{data}} \cdot \exp\left( -1.2 + 1.5 \cdot \mathcal{N}(0, 1) \right)$
         - 这里的 $\alpha_{bond}$ 在初始训练的时候是0，在后面fine-tune的时候是1.
@@ -728,14 +728,14 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
                 - 针对DNA或者RNA的token，其reference frame是： $(\text{C1}', \text{C3}', \text{C4}')$
                 - 针对其他小分子，其token可能只包含一个原子，那么选择b_i为这个原子本身，然后选择最近的atom为a_i，第二近的atom为c_i。
                 - 例外：如果选择的三个原子几乎在一条直线上（它们之间的夹脚小于25度），或者在实际的链里找不到这三个原子（比如钠离子只有一个原子），那么这个frame被定义为无效frame，后续不参与计算PAE。
-            - $\text{expressCoordinatesInFrame}(\vec{x}, \Phi)$ : 在$\Phi$坐标系下来表示原子$\vec{x}$的坐标。
+            - $\text{expressCoordinatesInFrame}(\vec{x}, \Phi)$ : 在 $\Phi$ 坐标系下来表示原子 $\vec{x}$ 的坐标。
                 
                 ![image.png](images/image%2077.png)
                 
                 - 粗略的解释这个算法：
-                    - 首先，从$\Phi$中得到三个参考原子的坐标a,b,c。将b视作新坐标系的原点。
+                    - 首先，从 $\Phi$ 中得到三个参考原子的坐标a,b,c。将b视作新坐标系的原点。
                     - 然后，从b到a和从b到c的方向，构造一个正交规范基(e_1, e_2, e_3)。
-                    - 最后，将x投影到这个新的基上，得到x_transformed这个在新的坐标系$\Phi$上的坐标。
+                    - 最后，将x投影到这个新的基上，得到x_transformed这个在新的坐标系 $\Phi$ 上的坐标。
                 - 具体的详细解释这个算法：
                     - 已知三个参考原子的坐标，然后需要以b原子的坐标为原点来构建一个正交的三维坐标系。
                     - 计算w1和w2，它们是从b到a方向上的一个**单位向量**和从b到c方向上的一个**单位向量**。
@@ -747,7 +747,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
                     - 最后将x投影到这个坐标系上面：
                         - 首先，将x平移，使得b成为原点。
                         - 然后，进行投影，计算d在每个基向量上的投影，即（d*e1, d*e2, d*e3）。
-                        - 最后，就得到了x在坐标系$\Phi$中的新坐标：x_transformed.
+                        - 最后，就得到了x在坐标系 $\Phi$ 中的新坐标：x_transformed。
             - $\text{computeAlignmentError}(\{\vec{x}_i\}, \{\vec{x}_i^\text{true}\}, \{\Phi_i\}, \{\Phi_i^\text{true}\}, \epsilon = 1e^{-8} \, \text{Å}^2)$：计算token i 和 token j 之间的对齐误差。
                 
                 ![image.png](images/image%2078.png)
