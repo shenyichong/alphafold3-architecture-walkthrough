@@ -704,7 +704,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
                 
                 - 其中 $d_{lm}$是mini-rollout的预测的原子l和m之间的距离。
                 - ${m}\in{R}$ ，m原子的选择是基于此训练序列的真实三维结构来获取：1）m的距离在l的一定就近范围内（30埃或者15埃，取决于m的原子类型）；2）m只选择位于聚合物上的原子（小分子和配体不考虑）；3）一个token只考虑一个原子，针对标准氨基酸或者核苷酸中的原子，m都是用其代表原子（ $C_\alpha$ 或 $C_1$）来表示。
-                - 然后针对每一对(l,m)，进行LDDT（Local Distance Difference Test）：$\frac{1}{4} \sum_{c \in \{0.5, 1, 2, 4\}} d\_{lm} < c$，如果l和m在真实距离中比较近，那么他们在预测结果中应该也足够近，这里设置了4个阈值，如果都满足，则LDDT则为1，如果都不满足则为0。
+                - 然后针对每一对(l,m)，进行LDDT（Local Distance Difference Test）： $\frac{1}{4} \sum_{c \in \{0.5, 1, 2, 4\}} d\_{lm} < c$，如果l和m在真实距离中比较近，那么他们在预测结果中应该也足够近，这里设置了4个阈值，如果都满足，则LDDT则为1，如果都不满足则为0。
                 - 最后，相当于针对所有在l附近的m计算得到的LDDT值进行加合，得到一个l原子的$lddt_l$值，其大小可以衡量在l原子上模型的预测结构和真实结构的差异，注意这是一个没有经过归一化的值。
         - 计算confidence head输出的此原子的LDDT的概率分布： $p_l^{\text{plddt}}$（训练和预测时）
             - 这里暂时忽略具体confidence的计算过程（后续会详细说明），需要知道的是这里的 $p_l^{\text{plddt}}$ 是在l原子处经过confidence head计算得到的，对 $lddt_l$ 值的分布的一个估计。
