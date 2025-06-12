@@ -54,34 +54,36 @@ by Yichong Shen
 
 ### Why do we need MSA?
 
-  - Different versions of a certain type of protein existing across different species may have similar sequences and structures. By collecting these proteins together, we can observe how certain positions of a protein change with evolution.
-  - Each row of the MSA represents similar proteins from different species. Conservative patterns in columns can reflect the importance of requiring specific amino acids at that position. The relationships between different columns reflect the interactions between amino acids (if two amino acids physically interact, their amino acid changes during evolution may also be correlated). Therefore, MSA is often used to enrich the representation of a single protein.
+- Different versions of a certain type of protein existing across different species may have similar sequences and structures. By collecting these proteins together, we can observe how certain positions of a protein change with evolution.
+
+- Each row of the MSA represents similar proteins from different species. Conservative patterns in columns can reflect the importance of requiring specific amino acids at that position. The relationships between different columns reflect the interactions between amino acids (if two amino acids physically interact, their amino acid changes during evolution may also be correlated). Therefore, MSA is often used to enrich the representation of a single protein.
 
 ### Why do we need Templates?
 
-  - Similarly, if the aforementioned MSA contains known structures, then it is very likely to help predict the structure of the current protein. Templates only focus on single-chain structures.
+- Similarly, if the aforementioned MSA contains known structures, then it is very likely to help predict the structure of the current protein. Templates only focus on single-chain structures.
 
 ### How to obtain MSA?
 
-  - Use genetic search to find similar protein or RNA chains. One chain typically searches for N_msa (<16384) similar chains:
+- Use genetic search to find similar protein or RNA chains. One chain typically searches for N_msa (<16384) similar chains:
+  ![image.png](images/image.png)
 
-    ![image.png](images/image.png)
-  - If there are multiple chains, and if they can be paired from the same species, then the MSA matrix may take this form:
+- If there are multiple chains, and if they can be paired from the same species, then the MSA matrix may take this form:
+  ![image.png](images/image%201.png)
 
-    ![image.png](images/image%201.png)
-  - Otherwise, it forms a diagonal matrix like this:
-
-    ![image.png](images/image%202.png)
+- Otherwise, it forms a diagonal matrix like this:
+  ![image.png](images/image%202.png)
 
 ### How to obtain Templates?
 
-  - Use Template Search. For the generated MSA, use HMM to search for similar protein sequences in the PDB database, then select the 4 highest quality structures from these matched sequences as templates.
+- Use Template Search. For the generated MSA, use HMM to search for similar protein sequences in the PDB database, then select the 4 highest quality structures from these matched sequences as templates.
 
 ### How to characterize Templates?
 
-  - Calculate the Euclidean distance between each token and token, using discretized distance representation (specifically, values are divided into 38 intervals, ranging from 3.15Å to 50.75Å, plus an additional interval representing distances exceeding 50.75Å).
-  - If certain tokens contain multiple atoms, select the central atom for distance calculation, for example, Cα is the central atom of amino acids, and C1 is the central atom of nucleotides.
-  - Templates only contain distance information on the same chain, ignoring interactions between chains.
+- Calculate the Euclidean distance between each token and token, using discretized distance representation (specifically, values are divided into 38 intervals, ranging from 3.15Å to 50.75Å, plus an additional interval representing distances exceeding 50.75Å).
+
+- If certain tokens contain multiple atoms, select the central atom for distance calculation, for example, Cα is the central atom of amino acids, and C1 is the central atom of nucleotides.
+
+- Templates only contain distance information on the same chain, ignoring interactions between chains.
 
 ## How to construct Atom-level representations?
 
@@ -578,13 +580,13 @@ Note 2: The 3 blocks in AtomAttentionEncoder and 3 blocks in AtomAttentionDecode
 
    ![image.png](images/bed1bf65-6bec-4b73-acf5-b2cba14de665.png)
 
-   - Finally, we return to Atom space, using the updated a_i to broadcast it to each atom to update atom-level single representation q_l.
+   - Now, we return to Atom space, using the updated a_i to broadcast it to each atom to update atom-level single representation q_l.
 
      ![image.png](images/image%2067.png)
    - Then, use Atom Transformer to update q_l.
 
      ![image.png](images/image%2068.png)
-   - Finally, after LayerNorm and linear transformation of the updated q_l, map it to the three-dimensional coordinates of the atomic sequence to get r_update_l.
+   - Then, after LayerNorm and linear transformation of the updated q_l, map it to the three-dimensional coordinates of the atomic sequence to get r_update_l.
 
      ![image.png](images/image%2069.png)
    - Finally, outside AtomAttentionDecoder, rescale the "dimensionless" r_update_l to non-unit standard deviation x_out_l, and what's returned is x_denoised_l.
