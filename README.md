@@ -618,9 +618,9 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
   - Here y_b_i_j refers to uniformly dividing the distance between the i-th token and j-th token into 64 buckets (from 2Å to 22Å). y_b_i_j refers to one of these 64 buckets. Here y_b_i_j uses one-hot encoding to represent that the actual result falls into a specific bucket.
   - p_b_i_j refers to the probability that the distance value between the i-th token and j-th token falls into a certain bucket, which is a result after softmax.
   - For any token pair (i,j), find the difference between its predicted distance and actual distance using cross-entropy:
-    - Calculate $\sum_{b=1}^{64} y_{ij}^b \log p_{ij}^b=\log p_{ij}^{\text{target\_bin}}$
+    - Calculate $\sum_{b=1}^{64} y_{ij}^b \log p_{ij}^b=\log p_{ij}^{\text{target-bin}}$
   - For all token pairs, calculate the average loss:
-    - Calculate $-\frac{1}{N\_{\text{res}}^2} \sum_{i,j} \log p\_{ij}^{\text{target\_bin}}$ to get the final L_distogram loss value.
+    - Calculate $-\frac{1}{N\_{\text{res}}^2} \sum_{i,j} \log p\_{ij}^{\text{target-bin}}$ to get the final L_distogram loss value.
 
 ## $L_{diffusion}$
 

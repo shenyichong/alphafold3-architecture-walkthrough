@@ -633,9 +633,9 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
     - 这里y_b_i_j指的是将第i个token和第j个token之间的距离均匀划分到64个桶中去（从2埃到22埃），y_b_i_j指的就是在这64个桶中的某一个桶，这里y_b_i_j使用one-hot编码表示实际的结果落到某一个特定的桶中。
     - p_b_i_j指的是对第i个token和第j个token之间的距离的值落到某一个桶中的概率，是一个softmax之后的结果。
     - 对于任意一个token对（i,j)，求其预测距离和实际距离之间的差别，采用cross-entropy的方式：
-        - 计算 $\sum_{b=1}^{64} y_{ij}^b \log p_{ij}^b=\log p_{ij}^{\text{target\textunderscore bin}}$
+        - 计算 $\sum_{b=1}^{64} y_{ij}^b \log p_{ij}^b=\log p_{ij}^{\text{target-bin}}$
     - 对于所有的token对，计算los的平均值：
-        - 计算 $-\frac{1}{N_{\text{res}}^2} \sum_{i,j} \log p_{ij}^{\text{target\textunderscore bin}}$ ，得到最后的L_distogram的loss的值。
+        - 计算 $-\frac{1}{N_{\text{res}}^2} \sum_{i,j} \log p_{ij}^{\text{target-bin}}$ ，得到最后的L_distogram的loss的值。
 
 ## $L_{diffusion}$
 
@@ -653,7 +653,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
             
             ![image.png](images/image%2072.png)
             
-        - 然后计算L_mse的值：  $L\_{MSE} = \frac{1}{3} \cdot \text{mean}\_l \big( w_l \| \tilde{x}\_l - x_l^{GT-aligned} \|^2 \big)$
+        - 然后计算L_mse的值：  $L_{MSE} = \frac{1}{3} \cdot \text{mean}_l \big( w_l \| \tilde{x}_l - x_l^{GT-aligned} \|^2 \big)$
         - 注意这里是一个weighted Mean Squared Error： $w_l = 1 + f_l^{\text{is\_dna}} \alpha^{\text{dna}} + f_l^{\text{is\_rna}} \alpha^{\text{rna}} + f_l^{\text{is\_ligand}} \alpha^{\text{ligand}}$ ，其中 $\alpha^{\text{dna}} = \alpha^{\text{rna}} = 5,  \alpha^{\text{ligand}} = 10$ 。这里对RNA/DNA和ligand的权重设置的较大，意味着如果这些原子的预测准确性有更高的要求。
     - $L_{bond}$ ：用于确保配体（ligand)和主链之间的键长是合理的损失函数。
         - 为什么需要这个loss呢？原因在于扩散模型可以恢复出一个总体结构正确，但是细节不够精确的模型，比如某一个化学键变得过长或者过短。同时配体就像挂在蛋白质链边上的小饰品，你不希望这个饰品过长或者过短，而蛋白质氨基酸之间的肽键基本长度是稳定的，主链内部原子排列的本身就有比较强的约束。
