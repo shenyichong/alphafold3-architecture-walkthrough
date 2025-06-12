@@ -65,12 +65,15 @@ by Yichong Shen
 ### How to obtain MSA?
 
 - Use genetic search to find similar protein or RNA chains. One chain typically searches for N_msa (<16384) similar chains:
+  
   ![image.png](images/image.png)
 
 - If there are multiple chains, and if they can be paired from the same species, then the MSA matrix may take this form:
+
   ![image.png](images/image%201.png)
 
 - Otherwise, it forms a diagonal matrix like this:
+
   ![image.png](images/image%202.png)
 
 ### How to obtain Templates?
