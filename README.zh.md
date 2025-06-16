@@ -16,9 +16,6 @@ by Yichong Shen
 
 ## 📋 目录
 
-<details>
-<summary>点击展开完整目录</summary>
-
 - [Input Preparation](docs/Input%20Preparation.zh.md)
   - [**MSA和Templates是如何来的？**](docs/Input%20Preparation.zh.md#msa和templates是如何来的)
     - [为什么需要MSA？](docs/Input%20Preparation.zh.md#为什么需要msa)
@@ -46,7 +43,6 @@ by Yichong Shen
     - [$L_{diffusion}$](docs/Loss%20Function.zh.md#l_diffusion)
     - [$L_{confidence}$](docs/Loss%20Function.zh.md#l_confidence)
 
-</details>
 
 ---
 

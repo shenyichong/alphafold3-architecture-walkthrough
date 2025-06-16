@@ -16,9 +16,6 @@ by Yichong Shen
 
 ## 📋 Table of Contents
 
-<details>
-<summary>Click to expand full table of contents</summary>
-
 - [Input Preparation](docs/Input%20Preparation.md)
   - [How are MSA and Templates obtained?](docs/Input%20Preparation.md#how-are-msa-and-templates-obtained)
     - [Why do we need MSA?](docs/Input%20Preparation.md#why-do-we-need-msa)
@@ -43,8 +40,6 @@ by Yichong Shen
   - [$L_{distogram}$](docs/Loss%20Function.md#l_distogram)
   - [$L_{diffusion}$](docs/Loss%20Function.md#l_diffusion)
   - [$L_{confidence}$](docs/Loss%20Function.md#l_confidence)
-
-</details>
 
 ---
 
