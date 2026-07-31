@@ -45,8 +45,8 @@ by Yichong Shen
 
 # 📬 Contact & Collaboration
 
-**Author**: Yichong Shen
-**Email**: shenyichong2011@gmail.com
+**Author**: Yichong Shen<br>
+**Email**: shenyichong2011@gmail.com<br>
 **GitHub**: [@shenyichong](https://github.com/shenyichong)
 
 For questions, discussions, or potential collaborations related to this AlphaFold 3 analysis, please don't hesitate to reach out via email or create an issue in this repository.

@@ -4,11 +4,11 @@
 
 ### 为什么需要MSA？
 - 存在于不同物种之间不同版本某一类蛋白，其序列和结构可能是相似的，通过将这些蛋白集合起来我们可以看到一个蛋白质的某些位置是如何随着进化改变的。
-- MSA的每一行代表来自不同物种的相似蛋白。列上的保守模式可以反应出该位置需要某些特定氨基酸的重要性。不同列之间的关系则反应出氨基酸之间的相互关系（如果两个氨基酸在物理上相互作用，则他们在进化工程中氨基酸的变化也可能是相关的。）所以MSA经常用来丰富单一蛋白质的representation。
+- MSA的每一行代表来自不同物种的相似蛋白。列上的保守模式可以反映出该位置需要某些特定氨基酸的重要性。不同列之间的关系则反映出氨基酸之间的相互关系（如果两个氨基酸在物理上相互作用，则他们在进化过程中氨基酸的变化也可能是相关的。）所以MSA经常用来丰富单一蛋白质的representation。
 
-### 为什么需要Template：
+### 为什么需要Templates？
 
-- 类似的，如果上述MSA中包含了已知的结构，那么那么它很有可能能够帮助预测当前蛋白质的结构。Template只关心单链的结构。
+- 类似的，如果上述MSA中包含了已知的结构，那么它很有可能能够帮助预测当前蛋白质的结构。Template只关心单链的结构。
 
 ### 如何获取MSA？
 
@@ -20,21 +20,23 @@
         
     ![image.png](../images/image%201.png)
         
-- 否则是这样的，构成一个diagnoal matrix：
+- 否则是这样的，构成一个diagonal matrix：
         
     ![image.png](../images/image%202.png)
         
-### 如何获取Template？
+### 如何获取Templates？
 
 - 使用Template Search，对于生成的MSA，使用HMM去PDB数据库中寻找与之相似的蛋白质序列，接下来从这些匹配到的序列中挑选4个最高质量的结构作为模版。
 
 ### 如何表征Templates？
 
 - 计算每一个token和token之间的欧几里得距离，并且是用离散化的距离表示（具体来说，值被划分为38个区间，范围从3.15Å到50.75Å，外加一个额外的区间表示超过50.75Å的距离）。
-- 如果某些token包含多个原子，则选择中心原子用于计算距离，比如 Cɑ 是氨基酸的中心原子，C1是核苷酸的中心原子。
+- 如果某些token包含多个原子，则选择中心原子用于计算距离，比如 Cɑ 是氨基酸的中心原子，C1′是核苷酸的中心原子。
 - 模版只包含同一条链上的距离信息，忽略了链之间的相互作用。
 
 ## **如何构建Atom-level的表征？**
+
+#### 构建p和q
 
 - 构建得到p和q：【对应Algorithm 5 AtomAttentionEncoder】
     - 为了构建atom-level的single representation，首先需要所有的原子层面的特征，第一步是首先对每一个氨基酸、核苷酸以及ligand(配体)构建一个参考构象(reference conformer)，参考构象可以通过特定的方式查出来或者算出来，作为局部的先验三维结构信息。
@@ -67,6 +69,8 @@
             
             - p(l,m) 还需要加上原始的c中的信息，包含c(:, l)的信息和c(:, m)的信息，这两个信息都先经过relu然后再做线性变换，变换成C_atompair的向量，加到p(l,m)中。
             - 最后p(l,m) = p(l,m) + 三层MLP(p(l,m))
+#### 更新q（Atom Transformer）
+
 - 更新q（Atom Transformer）：
     1. Adaptive LayerNorm:【对应Algorithm 26 AdaLN】
         - 输入为c和q，形状都是[C_atom, N_atoms]，c作为次要输入，主要用于计算q的gamma和beta的值，这样通过c来动态调整q的layerNorm的结果。
@@ -132,7 +136,7 @@
             
     4. Conditioned Transition: 【对应Algorithm 25 ConditionalTransitionBlock】
         - 输入是c，q和p，形状分别是[C_atom, N_atoms], [C_atom, N_atoms], [N_atoms, N_atoms, C_atompair]，输出是q，形状是[C_atom, N_atoms]。
-        - Atom Transformer的最后一个模块，这个相当于在Transformer中的MLP层，说他是Conditional是因为他包含在Adaptive LayerNorm层（前面第三步）和Conditional Gating（前面第三步）之间。区别只是中间的是MLP还是Attention。
+        - Atom Transformer的最后一个模块，这个相当于在Transformer中的MLP层，说他是Conditional是因为他包含在Adaptive LayerNorm层（前面第1步）和Conditional Gating（前面第3步）之间。区别只是中间的是MLP还是Attention。
             - 第一步还是一个Adaptive LayerNorm：
                 
                 ![image.png](../images/image%2021.png)
@@ -147,6 +151,8 @@
                 
 
 ## **如何构建Token-level的表征？**
+
+#### Token级单序列表征
 
 - 构建Token-level的Single Sequence Representation
     - 输入是q，atom-level single representation，形状是[C_atom, N_atoms]。输出是S_inputs和S_init，形状分别是[C_token+65, N_tokens]，[C_token, N_tokens]。
@@ -163,6 +169,8 @@
         ![image.png](../images/image%2026.png)
         
         - 注意：这里的C_s就是C_token = 384
+#### Token级对表征
+
 - 构建Token-level的Pair Representation 【来自 Algorithm 1 MainInferenceLoop】
     - 输入是S_init，形状是[C_token=384, N_tokens]，输出是Z_init，形状是[N_tokens, N_tokens, C_z=128]。
     - 要计算Z_init_i_j，那么需要得到特定两个token的特征，将其分别进行线性变换之后，再相加得到第一个z_i_j，向量长度从C_tokens也就是C_s=384转换为C_z=128。
@@ -178,16 +186,16 @@
             ![image.png](../images/image%2029.png)
             
             - a_residue_i_j：残基相对位置信息：
-                - 如果i和j token在同一个链中，那么d_residue_i_j 则是i残基和j残基相对位置之差，范围在[0, 65]。
+                - 如果i和j token在同一个链中，那么d_residue_i_j 则是i残基和j残基相对位置之差（经clip后），范围在[0, 65]。
                 - 如果i和j token不在同一个链中，那么d_residue_i_j = 2*r_max+1 = 65
                 - a_residue_i_j 为一个长度为66的one-hot编码，1的位置为d_residue_i_j的值。
             - a_token_i_j：token相对位置信息：
-                - 如果i和j token在同一个残基中，（对于modified 氨基酸或者核苷酸，那么一个原子是一个token），那么d_token_i_j 为不同残基序号之差，范围在[0, 65]。
+                - 如果i和j token在同一个残基中，（对于modified 氨基酸或者核苷酸，那么一个原子是一个token），那么d_token_i_j 为token序号之差（经clip后），范围在[0, 65]。
                 - 如果i和j token不在同一个残基中，取最大值d_token_i_j = 2*r_max+1 = 65
                 - a_token_i_j 为一个长度为66的one-hot编码，1的位置为d_token_i_j的值。
-            - a_chain_i_j：链相对位置信息：
-                - 如果i和j token不在同一条链中，那么d_chain_i_j 为链之间的序号之差，范围在[0, 5]。
-                - 如果i和j token在同一条链中，那么d_chain_i_j设置为最大值5。
+            - a_chain_i_j：对称拷贝（sym_id）相对位置信息：
+                - 如果i和j token属于同一个实体（same entity），那么d_chain_i_j 为sym_id之差（经clip后），范围在[0, 2*s_max] = [0, 4]。
+                - 如果i和j token不属于同一个实体，那么d_chain_i_j设置为最大值 2*s_max+1 = 5。
                 - a_chain_i_j为一个长度为6的one-hot编码，1的位置为d_chain_i_j的值。
             - b_same_entity_i_j：如果i和j token在同一个实体（完全相同的氨基酸序列为唯一实体，拥有唯一实体id）中，为1否则为0.
             - 最后将[a_residue_i_j, a_token_i_j, b_same_entity_i_j, a_chain_i_j] 拼接起来，得到了一个长度为66+66+1+6 = 139 = C_rpe 的向量。

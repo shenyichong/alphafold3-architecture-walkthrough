@@ -26,13 +26,13 @@
     - 当前的在t时刻的数据点x(t)。
     - 当前的时间步t。
     - 条件信息（如蛋白质的属性等信息，这里主要还是指的token-level和atom-level的single和pair representation 作为条件信息）。
-  - 模型的输出：预测的从x(t-1)到x(t)添加到噪声（训练），或者，预测从x(t)到x(t-1)应该移除的噪声（推理）。
+  - 模型的输出：预测的从x(t-1)到x(t)添加的噪声（训练），或者，预测从x(t)到x(t-1)应该移除的噪声（推理）。
 - Diffusion如何在Alphafold3中进行应用？
 
   ![image.png](../images/image%2050.png)
 
   - 在Alphafold3中，用于去噪的原始数据为一个矩阵x，它的维度为[N_atoms, 3]，其中3是每一个原子的坐标xyz。
-  - 在训练的时候，模型会基于一个正确的的原子三维坐标序列x，在每一步进行高斯噪声的添加，直到其坐标完全随机。
+  - 在训练的时候，模型会基于一个正确的原子三维坐标序列x，在每一步进行高斯噪声的添加，直到其坐标完全随机。
   - 然后在推理的时候，模型会从一个完全随机的原子三维坐标序列出发，在每一个时间步，首先会进行一个data-augmentation的操作，对三维坐标进行旋转和变换，目的是为了实现在AF2中的Invariant Point Attention(IPA)的功能，证明经过旋转和变换之后的三维坐标是相互等价的，然后会再向坐标加入一些噪声来尝试产生一些不同的生成数据，最后，预测当前时间步降噪之后的结果作为下一步的起点。
 
   ![image.png](../images/image%2051.png)
@@ -50,22 +50,22 @@
 
   - 首先它的输入参数包括了很多后续用于conditional diffusion的输入，包括f*，{s_inputs_i}, {s_trunk_i}, {z_trunk_i_j} ，这些后续主要在DiffusionModule这个算法中进行处理，这里暂时忽略不讨论。
   - 其他的输入主要是diffusion算法中所需要关注的输入，包括Noise Schedule $[c_0, c_1, ..., c_T]$，缩放因子( $γ_0$ 和 $γ_{min}$)，噪声缩放系数 noise_scale $λ$ ，和步长缩放系数 step_scale η**。**他们的具体作用介绍如下：
-    - Noise Schedule(噪声调度表)：定义了扩散过程中每一步的噪声强度，取值范围是[0,1]之间，它是预先设定好的一系列标量。一般情况下，噪声强度从t=0时候为最大，然后慢慢减小，到较小的t=T时候结束。
+    - Noise Schedule(噪声调度表)：定义了扩散过程中每一步的噪声强度（以Å为单位的噪声水平），它是预先设定好的一系列标量。一般情况下，噪声强度在推理开始时最大，然后慢慢减小，到推理结束时最小。
     - 缩放因子( $γ_0$ 和 $γ_{min}$)，噪声缩放系数 noise_scale $λ$ ，都是用在Sample Diffusion的推理每一步开始时，需要给上一个step的迭代结果先添加噪声，生成噪声 $\hat\xi_l$ 的作用。
     - 步长缩放系数 step scale η：主要是用于在后续x_l进行更新的时候，控制每一步迭代中输入更新的幅度，在x_l进行更新的过程中 $\vec{x}_l \leftarrow \vec{x}_l^{\text{noisy}} + \eta \cdot dt \cdot \vec{\delta}_l$ ：如果η > 1 则增大更新幅度，加快去噪过程；如果η < 1 则减小更新幅度，使得去噪过程更平滑，但是可能需要更多迭代步数。
   - 具体的算法流程解析如下：
-    1. 最初的时候， $\vec{x}_l$ 是完全随机的三维噪声，维度是[3]，{$\vec{x}_l$ }的维度是[N_atoms, 3]。其中 $\mathcal{N}(\vec{0}, \mathbf{I}_3)$ 是多维正态分布，均值为三维向量 [0,0,0], 表示三个维度的均值都是0；协方差矩阵为[1, 0, 0; 0, 1, 0; 0, 0, 1]，表示各个维度之间相互独立且方差都为1.
+    1. 最初的时候， $\vec{x}_l$ 是完全随机的三维噪声，并按初始噪声水平 $c_0$ 缩放：$\vec{x}_l \sim c_0 \cdot \mathcal{N}(\vec{0}, \mathbf{I}_3)$，维度是[3]，{$\vec{x}_l$ }的维度是[N_atoms, 3]。其中 $\mathcal{N}(\vec{0}, \mathbf{I}_3)$ 是多维正态分布，均值为三维向量 [0,0,0], 表示三个维度的均值都是0；协方差矩阵为[1, 0, 0; 0, 1, 0; 0, 0, 1]，表示各个维度之间相互独立且方差都为1.
     2. 接下来进入每一个时间步的循环，从 $\tau=1$ 开始直到 $\tau=T$：
     3. 首先进行一次数据增强，这里的目的是为了解决之前Alphafold2中使用Invariant Point Attention方法要去解决的问题，即解决旋转不变性和平移不变性，即一个序列的三维结构的坐标通过随机旋转和平移后实际上得到的新的坐标是等价的，三维结构本质不变，原子和原子之间的相对位置不变。
-    4. 一般情况下，$c_\tau < \gamma_{\text{min}}$，因为这里的 $\gamma_{\text{min}} = 1$，所以 $\gamma=0$.
-    5. 所以，这里的时间步 $\hat{t} = c_{\tau-1}$。
-    6. 计算得到的加噪声为： $\vec{\xi}_l = 0*(\vec{0}, \mathbf{I}_3)$，并没有加什么噪声。
-    7. 于是得到加了噪声最后的 $\vec{x}_l^{\text{noisy}} = \vec{x}_l$
+    4. 按 Algorithm 18：若 $c_\tau > \gamma_{\text{min}}$ 则 $\gamma = \gamma_0$，否则 $\gamma=0$（例如 $\gamma_0=0.8$，$\gamma_{\text{min}}=1.0$）。当 $\gamma=0$ 时本步不再额外注入噪声；当 $\gamma=\gamma_0$ 时，会按公式向当前坐标额外加入噪声。
+    5. 时间步取 $\hat{t} = c_{\tau-1}(\gamma+1)$（$\gamma=0$ 时退化为 $\hat{t} = c_{\tau-1}$）。
+    6. 计算得到的加噪声为： $\vec{\xi}_l = \lambda\sqrt{\hat{t}^2 - c_{\tau-1}^2}\,\mathcal{N}(\vec{0}, \mathbf{I}_3)$；当 $\gamma=0$ 时该项为0。
+    7. 于是得到加了噪声最后的 $\vec{x}_l^{\text{noisy}} = \vec{x}_l + \vec{\xi}_l$
     8. 这时候调用DiffusionModule（下一阶段会详解）计算真正此步推理的结果，得到去噪之后的结果 $\{\vec{x}_l^{\text{denoised}}\}$。
-    9. 然后开始计算去噪方向的向量 $\vec{\delta}_l = \frac{\left( \vec{x}_l^{\text{noisy}} - \vec{x}_l^{\text{denoised}} \right)}{\hat{t}}$，即加噪声坐标 $\vec{x}_l^{{noisy}}$距离去噪坐标 $\vec{x}_l^{\text{denoised}}$的方向和幅度，然后进行噪声归一化，使得去噪方向在每一个时间步的噪声强度变化中保持稳定。可以将其理解为扩散过程中类似于”梯度“或者“方向导数”
-    10. 然后计算时间步差值dt，当前时间步和之前时间步的差值，为更新提供了一个“步长”，从 $c_\tau$到前一个时间步参数 $\hat{t}$ 的差值，这里实际上正好就是 $dt = c_\tau - c_{\tau-1}$。
-    11. 最后，更新 $\vec{x}_l$，从加噪声的坐标开始 $\vec{x}_l^{\text{noisy}}$ 其实这里就是 $\vec{x}_l=\vec{x}_l+\eta \cdot dt \cdot \vec{\delta}_l$
-        。由于这里dt大概率是一个负数，所以实际上是减去噪声。
+    9. 然后开始计算去噪方向的向量 $\vec{\delta}_l = \frac{\left( \vec{x}_l^{\text{noisy}} - \vec{x}_l^{\text{denoised}} \right)}{\hat{t}}$，即从去噪坐标 $\vec{x}_l^{\text{denoised}}$ 指向加噪声坐标 $\vec{x}_l^{\text{noisy}}$ 的方向和幅度（再除以 $\hat{t}$ 做归一化）。可以将其理解为扩散过程中类似于”梯度“或者“方向导数”
+    10. 然后计算时间步差值dt，当前时间步和之前时间步的差值，为更新提供了一个“步长”，从 $c_\tau$到前一个时间步参数 $\hat{t}$ 的差值，这里实际上正好就是 $dt = c_\tau - \hat{t}$。
+    11. 最后，更新 $\vec{x}_l$，从加噪声的坐标开始 $\vec{x}_l^{\text{noisy}}$ 其实这里就是 $\vec{x}_l=\vec{x}_l^{\text{noisy}}+\eta \cdot dt \cdot \vec{\delta}_l$
+        。由于这里dt大概率是一个负数，乘以 $\vec{\delta}_l$ 后实际上会把坐标推向去噪结果（即减去噪声）。
 
 ### Diffusion Module部分详解（推理过程）
 
@@ -98,7 +98,7 @@
 
      1. 首先将s_trunk_i和s_inputs_i这两个single representation拼接起来，得到s_i，维度变成2*c_s+65（s_inputs_i的维度为c_s+65）。
      2. 然后对s_i进行归一化，然后进行线性变换，维度变成c_s。
-     3. 然后对diffusion的时间步长（具体实际上就是当前时间步的noise schecule的值）信息（标量），将其映射到高维向量空间，以增强模型捕获时间步长非线性特征的能力。
+     3. 然后对diffusion的时间步长（具体实际上就是当前时间步的noise schedule的值）信息（标量），将其映射到高维向量空间，以增强模型捕获时间步长非线性特征的能力。
         1. 具体的伪代码如下所示：
 
            ![image.png](../images/image%2058.png)
@@ -110,7 +110,7 @@
 
               - 不同的频率捕捉了时间步长的多尺度特征（低频表示全局动态，高频表示局部细节）
               - 偏移量增加了嵌入的多样性，使模型能学习到更复杂的时间特征。
-        2. 将高维时间步信息先进行归一化，然后进行线性变化后 (n → c_s)，加入到token-level 的 single 表征s_i中去了。
+        2. 将高维时间步信息先进行归一化，然后进行线性变换后 (n → c_s)，加入到token-level 的 single 表征s_i中去了。
         3. 再经过两次Transition layer的加合，得到一个新的s_i ，维度为c_s。
    - 通过在此DiffusionCondition部分加入diffusion时间步信息，使得模型在进行de-noising过程中能够知道当前diffusion过程的时间步，并且预测出需要去掉的正确尺度的噪声。
    - 经过DiffusionCondition的结果是在token-level尺度上的信息，接下来需要在atom-level计算原子级别的信息。
@@ -129,8 +129,8 @@
 
        ![image.png](../images/image%2062.png)
 
-       - 首先，从原始参考构象表征中计算得到c_l，并将q_l的初始值设定为c_l，然后然后从参考构象表征中计算atom-level的pair表征p_l_m。
-       - 接着，然后单r_l不为空的时候（就是当前diffusion部分的推理过程时）：
+       - 首先，从原始参考构象表征中计算得到c_l，并将q_l的初始值设定为c_l，然后从参考构象表征中计算atom-level的pair表征p_l_m。
+       - 接着，当r_l不为空的时候（就是当前diffusion部分的推理过程时）：
          - 使用s_trunk这个token-level的single特征，获取其在atom序号l对应的token序号tok_idx(l)，然后获取这个token序号对应的s_trunk的向量，维度为c_s(c_token)，然后进行LayerNorm之后，进行线性变换，维度从c_s → c_atom。然后再加上c_l本身，得到新的c_l，具体过程如下所示：
 
            ![image.png](../images/image%2063.png)
@@ -169,6 +169,6 @@
    - 最后，将更新后的q_l经过LayerNorm和线性变换之后，映射到原子序列的三维坐标上，得到r_update_l。
 
      ![image.png](../images/image%2069.png)
-   - 最后的最后，在AtomAttentionDecoder之外，将“无量纲（dimensionles）”的r_update_l，重新rescale到非单位标准差的 x_out_l上去，返回的就是x_denoised_l。
+   - 最后的最后，在AtomAttentionDecoder之外，将“无量纲（dimensionless）”的r_update_l，重新rescale到非单位标准差的 x_out_l上去，返回的就是x_denoised_l。
 
      ![image.png](../images/image%2070.png)

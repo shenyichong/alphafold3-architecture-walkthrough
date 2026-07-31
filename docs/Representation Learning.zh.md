@@ -17,7 +17,7 @@
     
     ![image.png](../images/image%2032.png)
     
-    1. 首先定义一个u_i_j用于存放结算结果，{u_i_j}的形状是[N_token, N_token, c]
+    1. 首先定义一个u_i_j用于存放计算结果，{u_i_j}的形状是[N_token, N_token, c]
     2. 针对每一个template，进行相同的操作：对a_t_i_j进行线性变换，从108维 → c维， 对z_i_j先进行LN，然后再进行线性变换，从c_z维 → c维，然后针对每一个template的a_t_i_j，都加上相同的z_i_j变换后的结果，得到v_i_j，维度为c维。
     3. 然后将v_i_j通过PairformerStack进行计算，得到的结果再加上v_i_j 作为v_i_j的结果，维度为c维。
     4. 最后对v_i_j 进行LN之后，对于所有的template都加到u_i_j向量上，维度为c维。
@@ -32,7 +32,7 @@
 
 - 此模块的目标：同时更新MSA和Pair Representation特征，并让其相互影响。先通过Outer Product Mean来让MSA表征更新Pair Representation，然后再使用Pair Representation通过 row-wise gated self-attention using only pair bias来更新MSA的表征。最终Pair representation经过一系列的三角计算并最终进行更新。
 - 输入：
-    - MSA 表征（会按照行进行subsamle，只随机选取其中少部分样本）
+    - MSA 表征（会按照行进行subsample，只随机选取其中少部分样本）
         - f_msa: 形状为 [N_msa, N_token, 32]，原始的N_msa条MSA样本，每一个位置有32种可能性。
         - f_has_deletion: 形状为 [N_msa, N_token], 原始信息，指示每个位置左边是否有删除。
         - f_deletion_value: 形状为 [N_msa, N_token]，原始信息，指示Raw deletion counts，大小在[0,1]之间。
@@ -72,7 +72,7 @@
                 
                 1. 首先对MSA特征m_si进行LN。
                 2. 然后对m_si进行多头线性变换，得到H_head个头v_h_si，线性变换维度从C_m→ c。
-                3. 对pair represnetation特征z_ij首先进行LN，然后进行多头线性变换，得到b_h_ij，维度从C_z→1。
+                3. 对pair representation特征z_ij首先进行LN，然后进行多头线性变换，得到b_h_ij，维度从C_z→1。
                 4. 对m_si进行多头线性变换，维度从C_m→c，然后计算其sigmoid的值，得到g_h_si，用于后续做gating。
                 5. 对b_h_ij沿着j的方向做softmax，得到weight w_h_ij，维度为1。
                 6. 这里比较难理解的是如何得到o_h_si，这里v_h_sj和w_h_ij在j方向上按元素相乘，然后加起来得到o_h_si的中间结果。
@@ -101,7 +101,7 @@
         - 其outgoing edges是：z_ik, z_jk
         - 其incoming edges是：z_ki, z_kj
     - 为什么要区分outgoing edges和incoming edges？为什么不能混用？ → 当前暂时的理解是，两条边同时从i和j指向k或者同时从k指向i和j，因为edge是有方向性的，同时从i和j指向k或相反，这两条边的物理含义是一致的，就是i和j对k的关系（或相反），更加便于模型准确地建模。（这里的理解还是不够透彻，等有机会再梳理。）
-- 接下来看看具体是如何计算trianglar update和triangular attention是如何计算的：
+- 接下来看看具体是如何计算triangular update和triangular attention是如何计算的：
     - Triangular Update
         - Outgoing：
             - 具体的算法实现：
@@ -110,7 +110,7 @@
                 
                 1. z_i_j 这个向量，自己进行LayerNorm，即在c_z维度上进行归一化。
                 2. z_i_j进行线性变换，转换为维度为c=128的向量，然后每一个位置计算sigmoid的值，然后和另外一个进行了线性变换的向量进行按元素相乘，得到一个a_i_j 或者b_i_j，维度是c维。
-                3. 然后还是对z_j_j先进行线性变换（变换维度不变，还是c_z），然后计算sigmoid，得到g_i_j，维度是c_z，这个向量用于gating。
+                3. 然后还是对z_i_j先进行线性变换（变换维度不变，还是c_z），然后计算sigmoid，得到g_i_j，维度是c_z，这个向量用于gating。
                 4. 最后，计算Triangular Update，要更新z_i_j，那么需要从a_i_k和b_j_k的计算中得到（k有N_token个选择）。具体方法是：那么从{a_i_j}中选取i行，得到{a_i}（有N_token个向量），从{b_i_j}中选取j行，得{b_j}（有N_token个向量），然后对{a_i}和{b_j}中的第k个元素，计算按元素相乘，得到一个c维的向量，然后再将所有的N_token个向量加起来，得到一个c维度的向量，然后进行LayerNorm计算，最后进行线性变换得到一个c_z维度的向量；最后按照元素相乘g_i_j，得到最终的z_i_j的结果。
             - 图示化解释：
                 
@@ -136,14 +136,14 @@
                 2. 针对N_head个头的特定h头，对z_i_j进行不同的线性变换，得到q_h_i_j, k_h_i_j, v_h_i_j，维度变换均为c_z → c。
                 3. 针对N_head个头的特定h头，对z_i_j进行线性变换，得到b_h_i_j。维度变换为c_z → 1。 
                 4. 针对N_head个头的特定h头，对z_i_j先进行线性变换，维度变换为c_z → c，然后每一个元素计算sigmoid的值，得到g_h_i_j用于后续的gating。
-                5. 计算Triangular Attention 第一步：计算attention score，针对q_h_i_j和k_h_i_k计算点积，然后再除以sqrt(c)，然后再加上b_h_j_k这个维度为1的值，得到的一个标量再在k维度上计算softmax的值，得到在k位置上的attention score a_h_i_j_k。这是一个标量值，页可以理解是一个weight的值，用于后续乘以value。
-                6. 计算Tiangular Attention 第二步：计算(i,j)位置上的attention的结果，通过a_h_i_j_k 与 v_h_i_k 的weighted sum，得到attention在(i,j)位置上的值，这是一个维度为c的向量；然后与g_h_i_j进行按元素相乘，得到gating之后的attention向量o_h_i_j，维度也为c。
+                5. 计算Triangular Attention 第一步：计算attention score，针对q_h_i_j和k_h_i_k计算点积，然后再除以sqrt(c)，然后再加上b_h_j_k这个维度为1的值，得到的一个标量再在k维度上计算softmax的值，得到在k位置上的attention score a_h_i_j_k。这是一个标量值，也可以理解是一个weight的值，用于后续乘以value。
+                6. 计算Triangular Attention 第二步：计算(i,j)位置上的attention的结果，通过a_h_i_j_k 与 v_h_i_k 的weighted sum，得到attention在(i,j)位置上的值，这是一个维度为c的向量；然后与g_h_i_j进行按元素相乘，得到gating之后的attention向量o_h_i_j，维度也为c。
                 7. 最后针对{i,j}位置的值，将多头进行合并，首先按照h个多头，在最后一个特征维度进行拼接，维度变化：c → h*c；然后再进行一次线性变换，将维度从 h*c → c 得到最终的结果z_i_j。
             - 图示化解释：
                 
                 ![image.png](../images/image%2045.png)
                 
-                - 这里注意，其实这里的Triangular Attention就是一种Axial Attention的变种，增加了b_j_k作为bias，增加了gating的机制。但是如果抛开这两个增加到特性，相当于是按行在做self-attention。
+                - 这里注意，其实这里的Triangular Attention就是一种Axial Attention的变种，增加了b_j_k作为bias，增加了gating的机制。但是如果抛开这两个增加的特性，相当于是按行在做self-attention。
         - Triangular Attention (Ending Node 对应incoming edges)
             - 具体算法实现
                 
@@ -155,10 +155,10 @@
                 
                 ![image.png](../images/image%2047.png)
                 
-                - 原来的图解是错误的，其并没有忠实按照官方文档中的实现进行图示，红色框部分修改了原来途中的错误标注。
+                - 原来的图解是错误的，其并没有忠实按照官方文档中的实现进行图示，红色框部分修改了原来图中的错误标注。
             
 - 最后看看Single Attention with pair bias 如何实现。
-    - 输入是token-level single representation {s_i} 和token-level pair representatoin {z_i_j} , 输出是{s_i}。
+    - 输入是token-level single representation {s_i} 和token-level pair representation {z_i_j} , 输出是{s_i}。
     - 主要使用{z_i_j}作为偏置，加入到{s_i}的self-attention计算中，同时{s_i}的self-attention中也增加了gating的机制。
     - 具体算法伪代码实现为：
         

@@ -9,7 +9,7 @@ Where, $L\_{confidence}= \mathcal{L}\_{\text{plddt}} + \mathcal{L}\_{\text{pde}}
 $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{L}\_{\text{plddt}} + \mathcal{L}\_{\text{pde}} + \mathcal{L}\_{\text{resolved}} + \alpha\_{\text{pae}} \cdot \mathcal{L}\_{\text{pae}} \right) + \alpha\_{\text{diffusion}} \cdot \mathcal{L}\_{\text{diffusion}} + \alpha\_{\text{distogram}} \cdot \mathcal{L}\_{\text{distogram}}$
 
 - L_distogram: Used to evaluate whether the predicted token-level distogram (i.e., distances between tokens) is accurate.
-- L_diffusion: Used to evaluate whether the predicted atom-level distogram (i.e., relationships between atoms) is accurate, and also includes some additional terms, including prioritizing relationships between nearby atoms and processing atoms in protein-ligand bonds.
+- L_diffusion: Used to evaluate whether the predicted atom-level structure (atomic coordinates and relationships between atoms) is accurate, and also includes some additional terms, including prioritizing relationships between nearby atoms and processing atoms in protein-ligand bonds.
 - L_confidence: Used to evaluate the accuracy of the model's self-awareness about which parts of its predicted structure are accurate or inaccurate.
 
 ## $L_{distogram}$
@@ -35,8 +35,8 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
 
   - In the diffusion training process, it first uses the output results of the trunk as input, including original atomic features f*, updated token-level pair representations, token-level single representations, etc.
   - During training, the Diffusion part will use a larger batch_size compared to the trunk part. After each sample passes through the trunk module, it will generate 48 related but different three-dimensional structures as input to the diffusion module. These structures are all generated based on real structures (real three-dimensional structures from training samples), but will undergo random rotation and translation, and add different degrees of noise. This approach is to obtain a large number of (noisy structure, target structure) pairs, allowing the diffusion model to learn how to denoise.
-  - Since the noise size is random, it's equivalent to generating a noisy structure from time step t (belonging to [0,T], based on different noise sizes, t may be close to T-1 time step or close to 0 time step), then hoping that the model approaches T time step after one diffusion module update, i.e., a completely noise-free state.
-  - Finally, for these 48 different results, compare them with Ground Truth results, calculate loss (L_diffusion), and backpropagate to optimize the model parameters (is this only optimizing the diffusion module or also optimizing the trunk module?).
+  - Since the noise size is random, it's equivalent to generating a noisy structure from time step t (belonging to [0,T], based on different noise sizes, t may be close to T or close to 0), then hoping that the model approaches t=0 after one diffusion module update, i.e., a completely noise-free clean structure.
+  - Finally, for these 48 different results, compare them with Ground Truth results, calculate loss (L_diffusion), and backpropagate to optimize both the diffusion module and the trunk module parameters (the confidence head is excluded from this path via stop-gradient).
 - Diffusion loss function construction: Note that loss function calculation is actually performed at the atomic level here.
 
   - $L_{MSE}$: Used to calculate the weighted Mean Squared Error of the difference between target atomic coordinates and predicted atomic coordinates. Here we know the target atomic sequence for three-dimensional coordinates: {x_GT_l}, and the predicted three-dimensional coordinate atomic sequence {x_l}. Calculate the difference between these two three-dimensional structures. The specific calculation method is as follows:
@@ -67,7 +67,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
           ![Smooth LDDT Component vs Distance Difference.png](../images/Smooth_LDDT_Component_vs_Distance_Difference.png)
       - Then, to make this calculation score mainly examine distances between nearby atoms, atom pairs with very far actual distances are not included in the loss calculation (c_l_m=0). That is, nucleotide atom pairs with actual distances greater than 30Å and non-nucleotide atom pairs with actual distances greater than 15Å are not included.
       - Finally, calculate the mean of $\epsilon_{lm}$ scores for atom pairs where c_l_m is not 0 as the lddt value. The closer this value is to 1, the more accurate the average atom pair prediction. Convert it to loss as 1-lddt.
-  - Finally, $\mathcal{L}\_{\text{diffusion}} = \frac{\hat{t}^2 + \sigma\_{\text{data}}^2}{(\hat{t} + \sigma\_{\text{data}})^2} \cdot \left( \mathcal{L}\_{\text{MSE}} + \alpha\_{\text{bond}} \cdot \mathcal{L}\_{\text{bond}} \right) + \mathcal{L}\_{\text{smooth-lddt}}$
+  - Finally, $\mathcal{L}\_{\text{diffusion}} = \frac{\hat{t}^2 + \sigma\_{\text{data}}^2}{(\hat{t} \cdot \sigma\_{\text{data}})^2} \cdot \left( \mathcal{L}\_{\text{MSE}} + \alpha\_{\text{bond}} \cdot \mathcal{L}\_{\text{bond}} \right) + \mathcal{L}\_{\text{smooth-lddt}}$
     - Here $\sigma_{data}$ is a constant determined by data variance, set to 16 here.
     - Here t^ is the sampled noise level during training, specifically calculated as $\hat{t}=\sigma_{\text{data}} \cdot \exp\left( -1.2 + 1.5 \cdot \mathcal{N}(0, 1) \right)$
     - Here $\alpha_{bond}$ is 0 during initial training and 1 during fine-tuning.
@@ -177,7 +177,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
       - First, calculate the absolute distance between representative atoms of token i and token j predicted by the model: $d\_{ij}^{\text{pred}}$
       - Then, calculate the real absolute distance between representative atoms of token i and token j: $d\_{ij}^{\text{gt}}$
       - Finally, directly calculate the absolute difference between the two: $e\_{ij} = \left| d\_{ij}^{\text{pred}} - d\_{ij}^{\text{gt}} \right|$
-    - Similarly, the result of $\mathbf{p}_{ij}^{\text{pae}}$ predicted through confidence head is also a 64-dimensional vector, representing the probability that e_i_j falls into 64 bins (from 0Å to 32Å, with 0.5Å steps).
+    - Similarly, the result of $\mathbf{p}_{ij}^{\text{pde}}$ predicted through confidence head is also a 64-dimensional vector, representing the probability that e_i_j falls into 64 bins (from 0Å to 32Å, with 0.5Å steps).
     - Similarly, then align the two through cross-entropy loss to get L_pde:
 
       ![image.png](../images/image%2081.png)

@@ -116,7 +116,7 @@
 
         1. The vector z_i_j performs LayerNorm on itself, i.e., normalization in the c_z dimension.
         2. z_i_j undergoes linear transformation to convert to a vector of dimension c=128, then calculates sigmoid value at each position, then element-wise multiplies with another linearly transformed vector to get a_i_j or b_i_j with dimension c.
-        3. Then z_j_j first undergoes linear transformation (transformation dimension unchanged, still c_z), then calculates sigmoid to get g_i_j with dimension c_z, this vector is used for gating.
+        3. Then z_i_j first undergoes linear transformation (transformation dimension unchanged, still c_z), then calculates sigmoid to get g_i_j with dimension c_z, this vector is used for gating.
         4. Finally, calculate Triangular Update. To update z_i_j, we need to obtain from calculations of a_i_k and b_j_k (k has N_token choices). The specific method is: select the i-th row from {a_i_j} to get {a_i} (N_token vectors), select the j-th row from {b_i_j} to get {b_j} (N_token vectors), then for the k-th element in {a_i} and {b_j}, calculate element-wise multiplication to get a c-dimensional vector, then sum all N_token vectors to get a c-dimensional vector, then perform LayerNorm calculation, finally perform linear transformation to get a c_z-dimensional vector; finally element-wise multiply g_i_j to get the final z_i_j result.
       - Graphical explanation:
 

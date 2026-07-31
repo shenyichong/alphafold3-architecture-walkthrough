@@ -34,11 +34,13 @@
 
 - Calculate the Euclidean distance between each token and token, using discretized distance representation (specifically, values are divided into 38 intervals, ranging from 3.15Å to 50.75Å, plus an additional interval representing distances exceeding 50.75Å).
 
-- If certain tokens contain multiple atoms, select the central atom for distance calculation, for example, Cα is the central atom of amino acids, and C1 is the central atom of nucleotides.
+- If certain tokens contain multiple atoms, select the central atom for distance calculation, for example, Cα is the central atom of amino acids, and C1′ is the central atom of nucleotides.
 
 - Templates only contain distance information on the same chain, ignoring interactions between chains.
 
 ## How to construct Atom-level representations?
+
+#### Constructing p and q
 
 - Constructing p and q: [Corresponding to Algorithm 5 AtomAttentionEncoder]
   - To construct atom-level single representation, we first need all atomic-level features. The first step is to construct a reference conformer for each amino acid, nucleotide, and ligand. The reference conformer can be looked up or calculated through specific methods, serving as local prior three-dimensional structural information.
@@ -68,6 +70,8 @@
 
        - p(l,m) also needs to add information from the original c, including information from c(:, l) and c(:, m). Both pieces of information first go through relu and then linear transformation, transformed into C_atompair vectors, and added to p(l,m).
        - Finally p(l,m) = p(l,m) + three-layer MLP(p(l,m))
+#### Updating q (Atom Transformer)
+
 - Updating q (Atom Transformer):
   1. Adaptive LayerNorm: [Corresponding to Algorithm 26 AdaLN]
 
@@ -132,7 +136,7 @@
   4. Conditioned Transition: [Corresponding to Algorithm 25 ConditionalTransitionBlock]
 
      - The inputs are c, q, and p, with shapes [C_atom, N_atoms], [C_atom, N_atoms], and [N_atoms, N_atoms, C_atompair] respectively, and the output is q with shape [C_atom, N_atoms].
-     - The last module of Atom Transformer, this is equivalent to the MLP layer in Transformer. It's called Conditional because it's contained between the Adaptive LayerNorm layer (step 3 above) and Conditional Gating (step 3 above). The only difference is whether the middle part is MLP or Attention.
+     - The last module of Atom Transformer, this is equivalent to the MLP layer in Transformer. It's called Conditional because it's contained between the Adaptive LayerNorm layer (step 1 above) and Conditional Gating (step 3 above). The only difference is whether the middle part is MLP or Attention.
        - The first step is still an Adaptive LayerNorm:
 
          ![image.png](../images/image%2021.png)
@@ -172,16 +176,16 @@
       ![image.png](../images/image%2029.png)
 
       - a_residue_i_j: Residue relative position information:
-        - If tokens i and j are in the same chain, then d_residue_i_j is the relative position difference between residue i and residue j, ranging from [0, 65].
+        - If tokens i and j are in the same chain, then d_residue_i_j is the relative position difference between residue i and residue j (after clipping), ranging from [0, 65].
         - If tokens i and j are not in the same chain, then d_residue_i_j = 2*r_max+1 = 65
         - a_residue_i_j is a one-hot encoding of length 66, where the position of 1 is the value of d_residue_i_j.
       - a_token_i_j: Token relative position information:
-        - If tokens i and j are in the same residue (for modified amino acids or nucleotides, one atom is one token), then d_token_i_j is the difference between different residue indices, ranging from [0, 65].
+        - If tokens i and j are in the same residue (for modified amino acids or nucleotides, one atom is one token), then d_token_i_j is the difference between token indices (after clipping), ranging from [0, 65].
         - If tokens i and j are not in the same residue, take the maximum value d_token_i_j = 2*r_max+1 = 65
         - a_token_i_j is a one-hot encoding of length 66, where the position of 1 is the value of d_token_i_j.
-      - a_chain_i_j: Chain relative position information:
-        - If tokens i and j are not in the same chain, then d_chain_i_j is the index difference between chains, ranging from [0, 5].
-        - If tokens i and j are in the same chain, then d_chain_i_j is set to the maximum value 5.
+      - a_chain_i_j: Symmetry-copy (sym_id) relative position information:
+        - If tokens i and j belong to the same entity, then d_chain_i_j is the difference between sym_ids (after clipping), ranging from [0, 2*s_max] = [0, 4].
+        - If tokens i and j do not belong to the same entity, then d_chain_i_j is set to the maximum value 2*s_max+1 = 5.
         - a_chain_i_j is a one-hot encoding of length 6, where the position of 1 is the value of d_chain_i_j.
       - b_same_entity_i_j: If tokens i and j are in the same entity (completely identical amino acid sequences are unique entities with unique entity ids), it's 1, otherwise 0.
       - Finally, concatenate [a_residue_i_j, a_token_i_j, b_same_entity_i_j, a_chain_i_j] to get a vector of length 66+66+1+6 = 139 = C_rpe.

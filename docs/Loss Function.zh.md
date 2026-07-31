@@ -9,13 +9,13 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot L\_{\text{confid
 $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{L}\_{\text{plddt}} + \mathcal{L}\_{\text{pde}} + \mathcal{L}\_{\text{resolved}} + \alpha\_{\text{pae}} \cdot \mathcal{L}\_{\text{pae}} \right) + \alpha\_{\text{diffusion}} \cdot \mathcal{L}\_{\text{diffusion}} + \alpha\_{\text{distogram}} \cdot \mathcal{L}\_{\text{distogram}}$
 
 - L_distogram: 用于评估预测出来的 token-level 的 distogram（也就是token-token之间的距离）是否准确。
-- L_diffusion: 用于评估预测出来atom-level 的 distogram （也就是atom-atom之间的关系）是否准确，同时还包含了一些额外的terms，包括优先考虑就近原子之间的关系以及对蛋白质-配体之间的键的原子进行处理。
+- L_diffusion: 用于评估预测出来的atom-level结构（原子坐标及atom-atom之间的关系）是否准确，同时还包含了一些额外的terms，包括优先考虑就近原子之间的关系以及对蛋白质-配体之间的键的原子进行处理。
 - L_confidence: 用于评估模型的关于对自己预测出来的结构哪些是准确或者不准确的self-awareness的准确性。
 
 ## $L_{distogram}$
 
 - 尽管输出的结果是一个atom-level的三维坐标，但是这里的L_distogram这个loss是一个token-level的指标，表征了模型对token和token之间的距离预测的准确度，但是由于得到的是原子三维坐标，所以要计算token的三维坐标，是直接拿这个token的中心原子的三维坐标作为token的三维坐标。
-- 为什么是要评估token（或者原子）之间的距离预测的是否准确，而不是直接评估token（或原子）的坐标预测的是否准确？→ 最本质的原因在于token（或者原子）的坐标在空间中睡着整个结构的旋转或者平移是可能改变的，但是他们之间的相对距离是不会改变的，这样的loss才能够体现结构的旋转和平移不变性。
+- 为什么是要评估token（或者原子）之间的距离预测的是否准确，而不是直接评估token（或原子）的坐标预测的是否准确？→ 最本质的原因在于token（或者原子）的坐标在空间中随着整个结构的旋转或者平移是可能改变的，但是他们之间的相对距离是不会改变的，这样的loss才能够体现结构的旋转和平移不变性。
 - 具体的公式是怎么样的？
     
     $\mathcal{L}\_{\text{dist}} = -\frac{1}{N\_{\text{res}}^2} \sum_{i,j} \sum_{b=1}^{64} y\_{ij}^b \log p\_{ij}^b$
@@ -24,7 +24,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
     - p_b_i_j指的是对第i个token和第j个token之间的距离的值落到某一个桶中的概率，是一个softmax之后的结果。
     - 对于任意一个token对（i,j)，求其预测距离和实际距离之间的差别，采用cross-entropy的方式：
         - 计算 $\sum_{b=1}^{64} y_{ij}^b \log p_{ij}^b=\log p_{ij}^{\text{target-bin}}$
-    - 对于所有的token对，计算los的平均值：
+    - 对于所有的token对，计算loss的平均值：
         - 计算 $-\frac{1}{N_{\text{res}}^2} \sum_{i,j} \log p_{ij}^{\text{target-bin}}$ ，得到最后的L_distogram的loss的值。
 
 ## $L_{diffusion}$
@@ -35,8 +35,8 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
     
     - 在diffusion的训练过程中，其首先使用trunk的输出结果作为输入，包括原始原子特征f*，更新后的token-level pair表征，token-level single 表征等。
     - 在训练过程中，Diffusion部分会使用相比于trunk部分更大的batch_size，每个样本通过trunk模块后，会生成48个相关但不同的三维结构作为diffusion模块的输入。这些结构都基于真实结构（来自于训练样本的真实三维结构）生成，但会进行随机旋转和平移，并添加不同程度的噪声。这样的做法是为了获得大量的（加噪结构，目标结构）对，让扩散模型学会如何去噪。
-    - 由于加噪的大小是随机的，相当于生成了一个从t时间步(属于[0,T]，基于噪声大小的不同，t可能是接近于T-1时间步，也可能是接近于0时间步)的带噪声结构，然后希望模型经过一次diffusion module的更新后，接近T时间步，也就是完全没有噪声的状态。
-    - 最后，对于这48个不同的结果，将其和Ground Truth结果进行对比，计算 loss（L_diffusion），并反向传播，优化模型（这里是仅仅优化diffusion module还是也会优化trunk module？）的参数。
+    - 由于加噪的大小是随机的，相当于生成了一个从t时间步(属于[0,T]，基于噪声大小的不同，t可能是接近于T时间步，也可能是接近于0时间步)的带噪声结构，然后希望模型经过一次diffusion module的更新后，接近t=0，也就是完全没有噪声的干净结构。
+    - 最后，对于这48个不同的结果，将其和Ground Truth结果进行对比，计算 loss（L_diffusion），并反向传播，同时优化diffusion module和trunk module的参数（confidence head因stop-gradient不在此回传路径中）。
 - Diffusion的loss函数构造：注意这里其实是在原子层面进行loss函数计算。
     - $L_{MSE}$：用于计算目标原子坐标和预测原子坐标差值的weighted Mean Squared Error。这里已知目标用于三维坐标的原子序列：{x_GT_l}，已知预测三维坐标原子序列{x_l}，计算这两个三维结构之间的差别，具体的计算方法如下：
         - 先对目标三维结构进行一次刚性对齐，相当于把两个结构整体的位置和方向对齐，让两者在同一个参考坐标系下面进行比较，这样比较的误差就是结构本身的差异，而不是旋转或者位置偏移造成的。这也就解释了，前面计算L_distogram的时候，在没有进行刚性对齐的情况下，直接比较的是token之间的距离在真实值和预测值之间差异，而不是直接比较token的坐标的差异。
@@ -49,7 +49,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
         - 为什么需要这个loss呢？原因在于扩散模型可以恢复出一个总体结构正确，但是细节不够精确的模型，比如某一个化学键变得过长或者过短。同时配体就像挂在蛋白质链边上的小饰品，你不希望这个饰品过长或者过短，而蛋白质氨基酸之间的肽键基本长度是稳定的，主链内部原子排列的本身就有比较强的约束。
         - 所以这里的计算方法为： $\mathcal{L}\_{\text{bond}} = \text{mean}\_{(l,m) \in \mathcal{B}} \left( \left\| \vec{x}\_l - \vec{x}\_m \right\| - \left\| \vec{x}\_l^{\text{GT}} - \vec{x}\_m^{\text{GT}} \right\| \right)^2$ ，这里的 $\mathcal{B}$指的是一系列的原子对（l是起始原子的序号，m是结束原子的序号），代表的是protein-ligand bonds。相当于计算目标键长和真实键长之间的平均差距。
         - 本质上也是一个MSE的loss。
-    - $L_{smooth-LDDT}$：用于比较预测的原子对之间的距离和实际原子对之间距离的差异的loss （Local Distance Difference Test），并且着重关注相近原子之间的距离预测的准确性（Local Distance Difference Test）。
+    - $L_{smooth-LDDT}$：用于比较预测的原子对之间的距离和实际原子对之间距离的差异的loss （Local Distance Difference Test），并且着重关注相近原子之间的距离预测的准确性。
         - 具体的计算伪代码为：
             
             ![image.png](../images/image%2073.png)
@@ -68,7 +68,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
                     
             - 然后，为了让这个计算分数主要考察的是相近原子之间的距离，所以对那些实际距离非常远的原子对，不加入到loss的计算（c_l_m=0）。即针对实际距离大于30Å的核苷酸原子对以及实际距离大于15Å的非核苷酸原子对不计入在内。
             - 最后，计算那些c_l_m不为0的原子对的 $\epsilon\_{lm}$ 评分的均值做为lddt的值，这个值越接近于1，则平均原子对预测的越准。将其换算成loss，为1-lddt。
-    - 最后的最后， $\mathcal{L}\_{\text{diffusion}} = \frac{\hat{t}^2 + \sigma\_{\text{data}}^2}{(\hat{t} + \sigma\_{\text{data}})^2} \cdot \left( \mathcal{L}\_{\text{MSE}} + \alpha\_{\text{bond}} \cdot \mathcal{L}\_{\text{bond}} \right) + \mathcal{L}\_{\text{smooth-lddt}}$
+    - 最后的最后， $\mathcal{L}\_{\text{diffusion}} = \frac{\hat{t}^2 + \sigma\_{\text{data}}^2}{(\hat{t} \cdot \sigma\_{\text{data}})^2} \cdot \left( \mathcal{L}\_{\text{MSE}} + \alpha\_{\text{bond}} \cdot \mathcal{L}\_{\text{bond}} \right) + \mathcal{L}\_{\text{smooth-lddt}}$
         - 这里的 $\sigma_{data}$ 是一个常数，由数据的方差决定，这里取16。
         - 这里的t^是在训练时的sampled noise level，具体的计算方法是 $\hat{t}=\sigma_{\text{data}} \cdot \exp\left( -1.2 + 1.5 \cdot \mathcal{N}(0, 1) \right)$
         - 这里的 $\alpha_{bond}$ 在初始训练的时候是0，在后面fine-tune的时候是1.
@@ -113,11 +113,11 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
             - 原因在于，经过前面的loss函数的优化， $p_l^{\text{plddt}}$ 是一个对l原子的预测效果有较好评估能力的分布了。所以就可以相信 $p_l^{\text{plddt}}$ 对lddt分布的估计，可以相当于求期望的方式来求lddt的预测值。
     - Predicted Aligned Error(PAE)：token对之间的对齐误差的置信度预测（以原子对的距离来计算）。
         - 一些概念和方法解释：
-            - **reference frame:** 一个token的reference frame使用三个原子的坐标来进行表示: $\Phi_i = (\vec{a}_i, \vec{b}_i, \vec{c}_i)$， 这个frame的作用是用于定义一个token i 的局部参考坐标系，用于与token j 建立联系。针对不同的token，referecne frame的三个原子的选择是不同的：
+            - **reference frame:** 一个token的reference frame使用三个原子的坐标来进行表示: $\Phi_i = (\vec{a}_i, \vec{b}_i, \vec{c}_i)$， 这个frame的作用是用于定义一个token i 的局部参考坐标系，用于与token j 建立联系。针对不同的token，reference frame的三个原子的选择是不同的：
                 - 针对蛋白质token，或者残基，其reference frame是： $(\text{N}, \text{C}^\alpha, \text{C})$
                 - 针对DNA或者RNA的token，其reference frame是： $(\text{C1}', \text{C3}', \text{C4}')$
                 - 针对其他小分子，其token可能只包含一个原子，那么选择b_i为这个原子本身，然后选择最近的atom为a_i，第二近的atom为c_i。
-                - 例外：如果选择的三个原子几乎在一条直线上（它们之间的夹脚小于25度），或者在实际的链里找不到这三个原子（比如钠离子只有一个原子），那么这个frame被定义为无效frame，后续不参与计算PAE。
+                - 例外：如果选择的三个原子几乎在一条直线上（它们之间的夹角小于25度），或者在实际的链里找不到这三个原子（比如钠离子只有一个原子），那么这个frame被定义为无效frame，后续不参与计算PAE。
             - $\text{expressCoordinatesInFrame}(\vec{x}, \Phi)$ : 在 $\Phi$ 坐标系下来表示原子 $\vec{x}$ 的坐标。
                 
                 ![image.png](../images/image%2077.png)
@@ -152,7 +152,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
                     - 注意，这里的(i,j)是不可交换的，e_i_j和e_j_i是不同的。
         - PAE Loss 计算流程：
             - 通过confidence head计算得到的 $\mathbf{p}\_{ij}^{\text{pae}}$ 为 b_pae=64 维度的向量，表示e_i_j 落到64个bin（从0埃到32埃，每0.5埃一个阶梯）中的概率。
-            - 为了使得 $\mathbf{p}\_{ij}^{\text{pae}}$ 的分布更加接近于实际的 e_i_j 的值，采用交叉熵的loss函数来对齐二者，使得 $\mathbf{p}\_{ij}^{\text{pae}}$ 能够更好地预测实际的e_i_j的值。（注意：这里loss的设计不是最小化e_i_j的值，那可能是为了获得更好的结构预测精度；而是通过交叉熵loss来更好的让预测的概率 $\mathbf{p}\_{ij}^{\text{pae}}$ 和e_i_j的结果更加的接近，从而更好地预测e_i_j的大小；e_i_j越大表明模型认为这两个位置的相对构象存在较大的不确定性，e_i_j越小意味着对于那两个位置的相对构想更有信心）
+            - 为了使得 $\mathbf{p}\_{ij}^{\text{pae}}$ 的分布更加接近于实际的 e_i_j 的值，采用交叉熵的loss函数来对齐二者，使得 $\mathbf{p}\_{ij}^{\text{pae}}$ 能够更好地预测实际的e_i_j的值。（注意：这里loss的设计不是最小化e_i_j的值，那可能是为了获得更好的结构预测精度；而是通过交叉熵loss来更好的让预测的概率 $\mathbf{p}\_{ij}^{\text{pae}}$ 和e_i_j的结果更加的接近，从而更好地预测e_i_j的大小；e_i_j越大表明模型认为这两个位置的相对构象存在较大的不确定性，e_i_j越小意味着对于那两个位置的相对构象更有信心）
             - 所以最终PAE的loss定义为：（注意这里的e_b_i_j和前面的e_i_j不同，如果e_i_j落在对应的bin b，则这个对应的e_b_i_j是1，否则e_b_i_j是0）
                 
                 ![image.png](../images/image%2079.png)
@@ -168,7 +168,7 @@ $\mathcal{L}\_{\text{loss}} = \alpha\_{\text{confidence}} \cdot \left( \mathcal{
             - 首先，计算模型预测的 token i 和token j的代表性原子之间的绝对距离： $d\_{ij}^{\text{pred}}$
             - 然后，计算模型的真实的 token i 和 token j 的代表性原子之间的绝对距离： $d\_{ij}^{\text{gt}}$
             - 最后，直接计算二者的绝对差异： $e\_{ij} = \left| d\_{ij}^{\text{pred}} - d\_{ij}^{\text{gt}} \right|$
-        - 类似的，通过confidence head预测出 $\mathbf{p}\_{ij}^{\text{pae}}$ 的结果也同样是64维的向量，表示e_i_j 落到64个bin（从0埃到32埃，每0.5埃一个阶梯）中的概率。
+        - 类似的，通过confidence head预测出 $\mathbf{p}\_{ij}^{\text{pde}}$ 的结果也同样是64维的向量，表示e_i_j 落到64个bin（从0埃到32埃，每0.5埃一个阶梯）中的概率。
         - 类似的，然后通过交叉熵loss来对齐二者，得到L_pde:
             
             ![image.png](../images/image%2081.png)
